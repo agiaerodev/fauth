@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '/core/widgets/app_button.dart';
-import '../screens/account_recovery.dart';
-import '../screens/create_account.dart';
+import '../pages/account_recovery.dart';
+import '../pages/create_account.dart';
 import './auth_input_field.dart';
 import '/modules/home/presentation/screen/home_screen.dart';
 
