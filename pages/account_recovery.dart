@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:project_airport_butler_passenger_app/core/widgets/navigation_app_bar.dart';
 import '/core/widgets/app_button.dart';
 import '../widgets/auth_input_field.dart';
 
@@ -10,8 +11,9 @@ class AccountRecovery extends StatelessWidget {
     final TextEditingController email = TextEditingController();
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text('Forgot password'),
+      appBar: NavigationAppBar(
+        title: 'Forgot pasword',
+        backgroundColor: Colors.transparent
       ),
       body: Padding(
         padding: EdgeInsetsGeometry.symmetric(horizontal: 16),
