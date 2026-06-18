@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import './login_page.dart';
 import '/core/widgets/app_button.dart';
 import '../widgets/auth_input_field.dart';
 import '../widgets/terms_and_privacy_notice.dart';
@@ -69,13 +68,13 @@ class CreateAccount extends StatelessWidget {
             ),
             SizedBox(height: 40,),
             AppButton(
-              label: 'Sign In',
+              label: 'Sign Up',
               variant: AppButtonVariant.gradient,
             ),
             SizedBox(height: 12,),
             GestureDetector(
               onTap: () {
-                Navigator.push(context, MaterialPageRoute(builder: (context) => LoginPage()));
+                Navigator.pop(context);
               },
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
