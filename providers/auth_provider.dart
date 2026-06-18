@@ -1,12 +1,12 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:logger/logger.dart';
-import 'package:airport_butler_agents_app/modules/auth/services/microsoft_auth_service.dart';
-import 'package:airport_butler_agents_app/core/http/api_client.dart';
-import 'package:airport_butler_agents_app/core/utils/avatar_url_helper.dart';
-import 'package:airport_butler_agents_app/core/utils/helpers.dart';
-import 'package:airport_butler_agents_app/modules/auth/services/auth_service.dart';
-import 'package:airport_butler_agents_app/core/services/preferences_service.dart';
+import '../services/microsoft_auth_service.dart';
+import '../../../core/http/api_client.dart';
+import '../../../core/utils/avatar_url_helper.dart';
+import '../../../core/utils/helpers.dart';
+import '../services/auth_service.dart';
+import '../../../core/services/preferences_service.dart';
 
 enum AuthMethod { microsoft, google, apple, email }
 
