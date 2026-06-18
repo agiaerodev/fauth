@@ -1,6 +1,6 @@
 import 'package:flutter_appauth/flutter_appauth.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:airport_butler_agents_app/modules/auth/services/auth_service.dart';
+import '../services/auth_service.dart';
 
 class MicrosoftAuthService {
   static final MicrosoftAuthService instance = MicrosoftAuthService._internal();

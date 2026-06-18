@@ -1,6 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
-import 'package:airport_butler_agents_app/core/services/base_api_service.dart';
+import '../../../core/services/base_api_service.dart';
 import 'package:flutter/material.dart';
 
 class AuthService extends BaseApiService {
