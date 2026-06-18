@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
+import './login_page.dart';
 import '/core/widgets/app_button.dart';
-import './login_screen.dart';
 import '../widgets/auth_input_field.dart';
 import '../widgets/terms_and_privacy_notice.dart';
 
@@ -75,7 +75,7 @@ class CreateAccount extends StatelessWidget {
             SizedBox(height: 12,),
             GestureDetector(
               onTap: () {
-                Navigator.push(context, MaterialPageRoute(builder: (context) => LoginScreen()));
+                Navigator.push(context, MaterialPageRoute(builder: (context) => LoginPage()));
               },
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
