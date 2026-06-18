@@ -3,7 +3,6 @@ import '/core/widgets/app_button.dart';
 import '../pages/account_recovery.dart';
 import '../pages/create_account.dart';
 import './auth_input_field.dart';
-import '/modules/home/presentation/screen/home_screen.dart';
 
 class SignInForm extends StatelessWidget {
   const SignInForm({ super.key });
@@ -41,7 +40,7 @@ class SignInForm extends StatelessWidget {
           AppButton(
             label: 'Sign In',
             onPressed: () {
-              Navigator.push(context, MaterialPageRoute(builder: (context) => HomeScreen()));
+              // TO-DO
             },
             variant: AppButtonVariant.gradient,
           ),
