@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../../../core/widgets/app_button.dart';
+import '/core/widgets/app_button.dart';
 import '../widgets/auth_input_field.dart';
 
 class AccountRecovery extends StatelessWidget {
