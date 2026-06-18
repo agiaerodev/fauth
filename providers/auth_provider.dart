@@ -14,6 +14,7 @@ class AuthProvider extends ChangeNotifier {
   final Logger _logger = Logger(printer: PrettyPrinter(methodCount: 0));
   dynamic _user;
   bool _isLoading = false;
+  final Map<AuthMethod, bool> _loadingMethods = {};
   bool _isInitialLoading = true;
   bool _hasSeenWelcome = false;
   Timer? _statusCheckTimer;
@@ -23,6 +24,8 @@ class AuthProvider extends ChangeNotifier {
   bool get isAuthenticated => _user != null;
 
   bool get isLoading => _isLoading;
+
+  bool isMethodLoading(AuthMethod method) => _loadingMethods[method] ?? false;
 
   bool get isInitialLoading => _isInitialLoading;
 
@@ -59,11 +62,39 @@ class AuthProvider extends ChangeNotifier {
     return initialsUrl;
   }
 
-  Future<void> login(String email, String password) async {
-    // Email/password login via Firebase was removed; auth now depends on social/backend flow.
-    throw UnsupportedError(
-      'Email/password authentication is not enabled for this app.',
-    );
+  Future<void> login(TextEditingController email, TextEditingController password) async {
+    _isLoading = true;
+    _loadingMethods[AuthMethod.email] = true;
+    notifyListeners();
+    try {
+      final response = await AuthService().login(
+        username: email.text.trim(),
+        password: password.text.trim(),
+      );
+      await handleBackendResponse(response);
+      if (_user != null) {
+        showNativeSnackBar("Welcome back!", Colors.green);
+      }
+    } catch (e, stack) {
+      _user = null;
+      _logger.f("Login failed", error: e, stackTrace: stack);
+
+      String errorMessage = "Login Failed";
+      if (e.toString().contains("401")) {
+        errorMessage = "Invalid email or password";
+      } else if (e.toString().contains("timeout")) {
+        errorMessage = "Login timeout - Please try again";
+      } else {
+        errorMessage = e.toString().replaceAll("Exception:", "").trim();
+      }
+
+      showNativeSnackBar(errorMessage, Colors.redAccent);
+      rethrow;
+    } finally {
+      _isLoading = false;
+      _loadingMethods[AuthMethod.email] = false;
+      notifyListeners();
+    }
   }
 
   Future<void> _initializeAuth() async {
@@ -96,6 +127,7 @@ class AuthProvider extends ChangeNotifier {
 
   Future<void> loginSocial(AuthMethod type) async {
     _isLoading = true;
+    _loadingMethods[type] = true;
     notifyListeners();
     try {
       dynamic response;
@@ -136,6 +168,7 @@ class AuthProvider extends ChangeNotifier {
       rethrow;
     } finally {
       _isLoading = false;
+      _loadingMethods[type] = false;
       notifyListeners();
     }
   }

@@ -8,12 +8,14 @@ class OutlineButtonProvider extends StatelessWidget {
     required this.icon,
     this.iconColor,
     this.onPressed,
+    this.isLoading = false,
   });
 
   final String label;
   final dynamic icon;
   final Color? iconColor;
   final VoidCallback? onPressed;
+  final bool isLoading;
 
   @override
   Widget build(BuildContext build) {
@@ -21,6 +23,7 @@ class OutlineButtonProvider extends StatelessWidget {
       label: label,
       leadingIcon: icon,
       onPressed: onPressed,
+      isLoading: isLoading,
       variant: AppButtonVariant.outlined,
       borderRadius: 12,
       borderColor: const Color(0xFFE2E8F0),

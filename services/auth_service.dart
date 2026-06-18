@@ -10,6 +10,26 @@ class AuthService extends BaseApiService {
 
   AuthService._internal();
 
+  Future<dynamic> login({
+    required String username,
+    required String password,
+  }) async {
+    const route = '/profile/v1/auth/login';
+    final body = {
+      'username': username,
+      'password': password,
+    };
+
+    try {
+      final response = await post(route, body);
+      debugPrint('Login successful');
+      return response;
+    } catch (e) {
+      debugPrint('Error during Login: $e');
+      rethrow;
+    }
+  }
+
   Future<dynamic> loginSocial({
     required String type,
     required String? token,
@@ -86,13 +106,13 @@ class AuthService extends BaseApiService {
     }
   }
 
-  Future<dynamic> logout() async {
+  Future<dynamic> logout({appModule = 'agent-app'}) async {
     const route = '/profile/v1/auth/logout';
     try {
       final setting = jsonEncode({
         "timezone": DateTime.now().timeZoneName,
         "fromAdmin": true,
-        "appMode": "agent-app",
+        "appMode": appModule,
         "authProvider": "local",
         "locale": "en",
       });

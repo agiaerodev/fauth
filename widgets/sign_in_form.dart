@@ -3,24 +3,45 @@ import '/core/widgets/app_button.dart';
 import '../pages/account_recovery.dart';
 import '../pages/create_account.dart';
 import './auth_input_field.dart';
+import '../providers/auth_provider.dart';
+import 'package:provider/provider.dart';
 
-class SignInForm extends StatelessWidget {
+class SignInForm extends StatefulWidget {
   const SignInForm({ super.key });
 
   @override
-  Widget build(BuildContext context) {
-    final TextEditingController email = TextEditingController();
-    final TextEditingController password = TextEditingController();
+  State<SignInForm> createState() => _SignInFormState();
+}
 
+class _SignInFormState extends State<SignInForm> {
+  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return Form(
+      key: _formKey,
       child: Column(
         children: [
           AuthInputField(
             label: 'Email',
-            controller: email,
+            controller: _emailController,
+            keyboardType: TextInputType.emailAddress,
             validator: (value) {
               if (value == null || value.isEmpty) {
                 return 'Please enter your email';
+              }
+              final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
+              if (!emailRegex.hasMatch(value)) {
+                return 'Please enter a valid email';
               }
               return null;
             },
@@ -28,40 +49,48 @@ class SignInForm extends StatelessWidget {
           const SizedBox(height: 12),
           AuthInputField(
             label: 'Password',
-            controller: password,
+            controller: _passwordController,
+            obscureText: true,
             validator: (value) {
               if (value == null || value.isEmpty) {
                 return 'Please enter your password';
               }
+              if (value.length < 6) {
+                return 'Password must be at least 6 characters';
+              }
               return null;
             },
           ),
-          SizedBox(height: 40),
+          const SizedBox(height: 40),
           AppButton(
             label: 'Sign In',
-            onPressed: () {
-              // TO-DO
+            isLoading: context.watch<AuthProvider>().isMethodLoading(AuthMethod.email),
+            onPressed: () async {
+              if (_formKey.currentState!.validate()) {
+                final authProvider = Provider.of<AuthProvider>(context, listen: false);
+                await authProvider.login(_emailController, _passwordController);
+              }
             },
             variant: AppButtonVariant.gradient,
           ),
-          SizedBox(height: 12,),
+          const SizedBox(height: 12),
           GestureDetector(
             onTap: () {
-              Navigator.push(context, MaterialPageRoute(builder: (context) => AccountRecovery()));
+              Navigator.push(context, MaterialPageRoute(builder: (context) => const AccountRecovery()));
             },
-            child: Text(
+            child: const Text(
               'I´ve forgotten my password',
               style: TextStyle(
                 color: Colors.blue
               )
             ),
           ),
-          SizedBox(height: 40,),
+          const SizedBox(height: 40),
           GestureDetector(
             onTap: () {
-              Navigator.push(context, MaterialPageRoute(builder: (context) => CreateAccount()));
+              Navigator.push(context, MaterialPageRoute(builder: (context) => const CreateAccount()));
             },
-            child: Row(
+            child: const Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Text('Don’t have an account?', style: TextStyle(fontSize: 16),),

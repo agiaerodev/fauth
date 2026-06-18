@@ -20,80 +20,82 @@ class LoginPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final authProvider = context.watch<AuthProvider>();
-    final isLoading = authProvider.isLoading;
     const Color titleColor = Color(0xFF1A2B47);
 
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 32.0),
-          child: Column(
-            children: [
-              const Spacer(flex: 2),
+        child: SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 32.0),
+            child: Column(
+              children: [
+                const SizedBox(height: 60),
 
-              const Text(
-                'Sign in or sing up',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: titleColor,
-                  fontSize: 32,
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: -0.5,
+                const Text(
+                  'Sign in or sing up',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: titleColor,
+                    fontSize: 32,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: -0.5,
+                  ),
                 ),
-              ),
 
-              const SizedBox(height: 40),
-              Wrap(
-                runSpacing: 10,
-                children: [
-                  OutlineButtonProvider(
-                    label: 'Continue with Google',
-                    icon: FontAwesomeIcons.google,
-                  ),
-                  OutlineButtonProvider(
-                    label: 'Continue with Microsoft',
-                    icon: FontAwesomeIcons.microsoft,
-                    iconColor: Color(0xFF00A4EF),
-                    onPressed: isLoading
-                      ? null
-                      : () => _handleLogin(context, AuthMethod.microsoft),
-                  ),
-                  OutlineButtonProvider(
-                    label: 'Continue with Apple',
-                    icon: FontAwesomeIcons.apple,
-                    iconColor: Color(0xFF000000),
-                  ),
-                ]
-              ),
-              Padding(
-                padding: EdgeInsets.symmetric(vertical: 16),
-                child: Row(
+                const SizedBox(height: 40),
+                Wrap(
+                  runSpacing: 10,
                   children: [
-                    Expanded(
-                      child: Divider(
-                        color: Color(0xFFCBD5E1),
-                        thickness: 1,
-                      ),
+                    OutlineButtonProvider(
+                      label: 'Continue with Google',
+                      icon: FontAwesomeIcons.google,
+                      isLoading: authProvider.isMethodLoading(AuthMethod.google),
                     ),
-                    Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 17),
-                      child: Text('or', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 13)),
+                    OutlineButtonProvider(
+                      label: 'Continue with Microsoft',
+                      icon: FontAwesomeIcons.microsoft,
+                      iconColor: const Color(0xFF00A4EF),
+                      isLoading: authProvider.isMethodLoading(AuthMethod.microsoft),
+                      onPressed: () => _handleLogin(context, AuthMethod.microsoft),
                     ),
-                    Expanded(
-                      child: Divider(
-                        color: Color(0xFFCBD5E1),
-                        thickness: 1,
-                      ),
+                    OutlineButtonProvider(
+                      label: 'Continue with Apple',
+                      icon: FontAwesomeIcons.apple,
+                      iconColor: const Color(0xFF000000),
+                      isLoading: authProvider.isMethodLoading(AuthMethod.apple),
                     ),
-                  ],
+                  ]
                 ),
-              ),
-              SignInForm(),
-              SizedBox(height: 40),
-              TermsAndPrivacyNotice(),
-              const SizedBox(height: 16),
-            ],
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 16),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Divider(
+                          color: Color(0xFFCBD5E1),
+                          thickness: 1,
+                        ),
+                      ),
+                      Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 17),
+                        child: Text('or', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 13)),
+                      ),
+                      Expanded(
+                        child: Divider(
+                          color: Color(0xFFCBD5E1),
+                          thickness: 1,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SignInForm(),
+                const SizedBox(height: 40),
+                const TermsAndPrivacyNotice(),
+                const SizedBox(height: 16),
+              ],
+            ),
           ),
         ),
       ),
