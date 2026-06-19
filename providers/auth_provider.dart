@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:logger/logger.dart';
 import '../services/microsoft_auth_service.dart';
+import '../services/google_auth_services.dart';
 import '../../../core/http/api_client.dart';
 import '../../../core/utils/avatar_url_helper.dart';
 import '../../../core/utils/helpers.dart';
@@ -136,6 +137,7 @@ class AuthProvider extends ChangeNotifier {
           response = await MicrosoftAuthService.instance.login();
           break;
         case AuthMethod.google:
+          response = await GoogleAuthService.instance.login();
           break;
         default:
           showNativeSnackBar(

@@ -51,6 +51,7 @@ class LoginPage extends StatelessWidget {
                       label: 'Continue with Google',
                       icon: FontAwesomeIcons.google,
                       isLoading: authProvider.isMethodLoading(AuthMethod.google),
+                      onPressed: () => _handleLogin(context, AuthMethod.google),
                     ),
                     OutlineButtonProvider(
                       label: 'Continue with Microsoft',
