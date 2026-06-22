@@ -34,7 +34,7 @@ class AuthProvider extends ChangeNotifier {
 
   final String appMode;
   final String permissionApp;
-  final Future<bool> Function(int userId, dynamic userData)? verifyUserStatusFn;
+  final Future<Map<String, dynamic>?> Function(int userId, dynamic userData)? verifyUserStatusFn;
 
   AuthProvider({
     required this.appMode,
@@ -211,7 +211,7 @@ class AuthProvider extends ChangeNotifier {
       if (userData != null) {
         ApiClient().setHandlingUnauthorized(false);
         await ApiClient().saveToken(token, expirationDate);
-        await _verifyConciergeStatus(userData['id'], userData);
+        await _validateAndSetUser(userData['id'], userData);
         _startStatusCheck();
         return;
       }
@@ -221,6 +221,20 @@ class AuthProvider extends ChangeNotifier {
       _logger.f("Error processing server response", error: e);
       await logout();
     }
+  }
+
+  Future<void> _validateAndSetUser(int userId, dynamic userData) async {
+    if (verifyUserStatusFn != null) {
+      final validatedUser = await verifyUserStatusFn!(userId, userData);
+      if (validatedUser != null && hasAccess(permissionApp, userData)) {
+        _user = validatedUser;
+      } else {
+        await logout();
+      }
+    } else {
+      _user = userData;
+    }
+    notifyListeners();
   }
 
   void _startStatusCheck() {
@@ -238,60 +252,6 @@ class AuthProvider extends ChangeNotifier {
   void _stopStatusCheck() {
     _statusCheckTimer?.cancel();
     _statusCheckTimer = null;
-  }
-
-  Future<bool> _verifyConciergeStatus(int userId, dynamic userData) async {
-    try {
-      dynamic conciergeResponse;
-      int attempts = 0;
-      const maxAttempts = 2;
-
-      while (attempts < maxAttempts) {
-        try {
-          conciergeResponse = await AuthService().getConcierge(userId);
-          break;
-        } catch (e) {
-          attempts++;
-          if (attempts < maxAttempts) {
-            _logger.w(
-              "Attempt $attempts failed while verifying concierge, retrying...",
-            );
-            await Future.delayed(const Duration(milliseconds: 500));
-          } else {
-            rethrow;
-          }
-        }
-      }
-
-      if (conciergeResponse != null &&
-          conciergeResponse is Map &&
-          conciergeResponse['userId'] != null &&
-          userId == conciergeResponse['userId'] &&
-          conciergeResponse['status'] == true &&
-          hasAccess(permissionApp, userData)) {
-        _user = Map<String, dynamic>.from(userData);
-        if (conciergeResponse['mainimageUrl'] != null) {
-          _user['mainimageUrl'] = conciergeResponse['mainimageUrl'];
-        }
-        return true;
-      } else if (conciergeResponse != null && conciergeResponse is Map) {
-        showNativeSnackBar(
-          "Access denied: inactive concierge",
-          Colors.redAccent,
-        );
-        _logger.w("Inactive user - logging out for userId: $userId");
-        await logout();
-        return false;
-      } else {
-        _logger.w("Unexpected server response: $conciergeResponse");
-        return false;
-      }
-    } catch (e) {
-      _logger.w(
-        "Error verifying concierge status (possible network issue): $e",
-      );
-      return false;
-    }
   }
 
   Future<void> logout() async {
@@ -357,7 +317,7 @@ class AuthProvider extends ChangeNotifier {
         return;
       }
 
-      await _verifyConciergeStatus(userData['id'], userData);
+      await _validateAndSetUser(userData['id'], userData);
       _startStatusCheck();
     } catch (e, stackTrace) {
       _logger.e(
