@@ -65,6 +65,7 @@ class LoginPage extends StatelessWidget {
                       icon: FontAwesomeIcons.apple,
                       iconColor: const Color(0xFF000000),
                       isLoading: authProvider.isMethodLoading(AuthMethod.apple),
+                      onPressed: () => _handleLogin(context, AuthMethod.apple),
                     ),
                   ]
                 ),
