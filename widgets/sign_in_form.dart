@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import '/core/widgets/app_button.dart';
 import '../pages/account_recovery.dart';
 import '../pages/create_account.dart';
+import '../pages/otp_page.dart';
+import 'package:go_router/go_router.dart';
+import '../routes/auth_route_names.dart';
 import './auth_input_field.dart';
 import '../providers/auth_provider.dart';
 import 'package:provider/provider.dart';
@@ -68,7 +71,19 @@ class _SignInFormState extends State<SignInForm> {
             onPressed: () async {
               if (_formKey.currentState!.validate()) {
                 final authProvider = Provider.of<AuthProvider>(context, listen: false);
-                await authProvider.login(_emailController, _passwordController);
+                try {
+                  // El método login ahora valida credenciales y envía el OTP
+                  await authProvider.login(_emailController, _passwordController);
+                  
+                  if (mounted) {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const OtpPage()),
+                    );
+                  }
+                } catch (e) {
+                  // Error manejado en el provider
+                }
               }
             },
             variant: AppButtonVariant.gradient,

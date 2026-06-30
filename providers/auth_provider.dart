@@ -20,18 +20,21 @@ class AuthProvider extends ChangeNotifier {
   bool _isInitialLoading = true;
   bool _hasSeenWelcome = false;
   Timer? _statusCheckTimer;
+  int _resendSeconds = 120;
+  Timer? _resendTimer;
+  bool _isOtpLoading = false;
+  String? _otpEmail;
 
   dynamic get user => _user;
-
   bool get isAuthenticated => _user != null;
-
   bool get isLoading => _isLoading;
-
   bool isMethodLoading(AuthMethod method) => _loadingMethods[method] ?? false;
-
   bool get isInitialLoading => _isInitialLoading;
-
   bool get hasSeenWelcome => _hasSeenWelcome;
+  int get resendSeconds => _resendSeconds;
+  bool get isOtpLoading => _isOtpLoading;
+  String? get otpEmail => _otpEmail;
+  bool get canResend => _resendSeconds == 0;
 
   final String appMode;
   final String permissionApp;
@@ -69,14 +72,21 @@ class AuthProvider extends ChangeNotifier {
     _loadingMethods[AuthMethod.email] = true;
     notifyListeners();
     try {
+      // 1. Verificamos credenciales
       final response = await AuthService().login(
         username: email.text.trim(),
         password: password.text.trim(),
       );
-      await handleBackendResponse(response);
-      if (_user != null) {
-        showNativeSnackBar("Welcome back!", Colors.green);
-      }
+
+      // Si el login es exitoso, preparamos el flujo de OTP
+      _otpEmail = email.text.trim();
+      
+      // 2. Solicitamos el envío del PIN
+      await sendOtp(_otpEmail!, authMode: 'login');
+      
+      // No llamamos a handleBackendResponse aquí, 
+      // lo haremos en verifyOtp tras confirmar el PIN.
+
     } catch (e, stack) {
       _user = null;
       _logger.f("Login failed", error: e, stackTrace: stack);
@@ -334,9 +344,79 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
+  Future<void> sendOtp(String email, {String? authMode}) async {
+    _isOtpLoading = true;
+    _otpEmail = email;
+    notifyListeners();
+    try {
+      final response = await AuthService().sendPin(
+        username: email,
+        authMode: authMode
+      );
+      if (response['data']?['is_success'] == true) {
+        startResendTimer();
+        showNativeSnackBar("OTP sent successfully", Colors.green);
+      } else {
+        showNativeSnackBar(response['data']?['message'] ?? "Failed to send OTP", Colors.redAccent);
+      }
+    } catch (e) {
+      _logger.e("Error sending OTP: $e");
+      showNativeSnackBar("Failed to send OTP", Colors.redAccent);
+      rethrow;
+    } finally {
+      _isOtpLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<bool> verifyOtp(String pin) async {
+    if (_otpEmail == null) return false;
+    _isOtpLoading = true;
+    notifyListeners();
+    try {
+      final response = await AuthService().confirmPin(
+        username: _otpEmail!,
+        pin: pin,
+      );
+      
+      final data = response['data'];
+      if (data?['is_success'] == true) {
+        // If confirm-pin returns the user data/token, handle it
+        if (data?['userToken'] != null) {
+          await handleBackendResponse(response);
+        }
+        return true;
+      } else {
+        showNativeSnackBar(data?['message'] ?? "Invalid OTP", Colors.redAccent);
+        return false;
+      }
+    } catch (e) {
+      _logger.e("Error verifying OTP: $e");
+      showNativeSnackBar("Failed to verify OTP", Colors.redAccent);
+      return false;
+    } finally {
+      _isOtpLoading = false;
+      notifyListeners();
+    }
+  }
+
+  void startResendTimer() {
+    _resendSeconds = 120;
+    _resendTimer?.cancel();
+    _resendTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (_resendSeconds > 0) {
+        _resendSeconds--;
+        notifyListeners();
+      } else {
+        _resendTimer?.cancel();
+      }
+    });
+  }
+
   @override
   void dispose() {
     _stopStatusCheck();
+    _resendTimer?.cancel();
     super.dispose();
   }
 }

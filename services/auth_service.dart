@@ -30,6 +30,52 @@ class AuthService extends BaseApiService {
     }
   }
 
+  Future<dynamic> sendPin({
+    required String username,
+    String? authMode
+  }) async {
+    const route = '/profile/v1/auth/send-pin';
+    final body = {
+      "attributes": {
+        "username": username,
+        "device": _detectDevice(),
+        if (authMode != null) "authMode": authMode
+      }
+    };
+
+    try {
+      final response = await post(route, body);
+      debugPrint('Send PIN successful');
+      return response;
+    } catch (e) {
+      debugPrint('Error during Send PIN: $e');
+      rethrow;
+    }
+  }
+
+  Future<dynamic> confirmPin({
+    required String username,
+    required String pin,
+  }) async {
+    const route = '/profile/v1/auth/confirm-pin';
+    final body = {
+      "attributes": {
+        "username": username,
+        "pin": pin,
+        "device": _detectDevice(),
+      }
+    };
+
+    try {
+      final response = await post(route, body);
+      debugPrint('Confirm PIN successful');
+      return response;
+    } catch (e) {
+      debugPrint('Error during Confirm PIN: $e');
+      rethrow;
+    }
+  }
+
   Future<dynamic> loginSocial({
     required String type,
     required String? token,
