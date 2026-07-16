@@ -106,6 +106,19 @@ class AppleAuthService {
         throw Exception('No identity token received from Apple');
       }
 
+      // Apple solo envía el nombre (y a veces el email) en el `user`
+      // (JSON string) del response de `authorize`, y únicamente la
+      // PRIMERA vez que el usuario autoriza esta app. No viene en el id_token.
+      final rawUser = authorizationResponse.authorizationAdditionalParameters?['user'];
+      Map<String, dynamic>? appleUser;
+      if (rawUser != null) {
+        try {
+          appleUser = jsonDecode(rawUser) as Map<String, dynamic>;
+        } catch (_) {
+          appleUser = null;
+        }
+      }
+
       final response = await AuthService().loginSocial(
         type: 'apple',
         token: token,
@@ -114,6 +127,7 @@ class AppleAuthService {
           'accessToken': result.accessToken,
           'refreshToken': result.refreshToken,
           'rawNonce': rawNonce, // Algunos backends necesitan el nonce original
+          if (appleUser != null) 'user': appleUser,
         },
       );
       return response;
