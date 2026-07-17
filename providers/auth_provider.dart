@@ -72,21 +72,14 @@ class AuthProvider extends ChangeNotifier {
     _loadingMethods[AuthMethod.email] = true;
     notifyListeners();
     try {
-      // 1. Verificamos credenciales
-      await AuthService().login(
+      final response = await AuthService().login(
         username: email.text.trim(),
         password: password.text.trim(),
       );
-
-      // Si el login es exitoso, preparamos el flujo de OTP
-      _otpEmail = email.text.trim();
-      
-      // 2. Solicitamos el envío del PIN
-      await sendOtp(_otpEmail!, authMode: 'login');
-      
-      // No llamamos a handleBackendResponse aquí, 
-      // lo haremos en verifyOtp tras confirmar el PIN.
-
+      await handleBackendResponse(response);
+      if (_user != null) {
+        showNativeSnackBar("Welcome back!", Colors.green);
+      }
     } catch (e, stack) {
       _user = null;
       _logger.f("Login failed", error: e, stackTrace: stack);
