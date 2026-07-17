@@ -110,30 +110,35 @@ class AuthProvider extends ChangeNotifier {
   }
 
   Future<void> _initializeAuth() async {
-    _hasSeenWelcome = await PreferencesService().hasSeenWelcome();
-    ApiClient().onUnauthorized = () async {
-      _logger.w("Unauthorized. Please sign in again...");
-      showNativeSnackBar(
-        "Unauthorized. Please sign in again.",
-        Colors.redAccent,
-      );
-      await logout();
-    };
-    // Timer de seguridad
+    // Temporizador de seguridad: si tarda más de 5 segundos, liberamos la pantalla
     Future.delayed(const Duration(seconds: 5), () {
       if (_isInitialLoading) {
+        _logger.w("La inicialización está tardando demasiado. Forzando finalización de carga.");
         _isInitialLoading = false;
         notifyListeners();
       }
     });
 
     try {
+      _hasSeenWelcome = await PreferencesService().hasSeenWelcome();
+      
+      ApiClient().onUnauthorized = () async {
+        _logger.w("Unauthorized. Please sign in again...");
+        showNativeSnackBar(
+          "Unauthorized. Please sign in again.",
+          Colors.redAccent,
+        );
+        await logout();
+      };
+
       await initializeAuthenticatedUser();
     } catch (e) {
       _logger.e("Error en carga inicial: $e");
     } finally {
-      _isInitialLoading = false;
-      notifyListeners();
+      if (_isInitialLoading) {
+        _isInitialLoading = false;
+        notifyListeners();
+      }
     }
   }
 
