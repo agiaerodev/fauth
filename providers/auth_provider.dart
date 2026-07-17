@@ -73,7 +73,7 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
     try {
       // 1. Verificamos credenciales
-      final response = await AuthService().login(
+      await AuthService().login(
         username: email.text.trim(),
         password: password.text.trim(),
       );
@@ -196,7 +196,8 @@ class AuthProvider extends ChangeNotifier {
 
   Future<void> handleBackendResponse(dynamic response) async {
     try {
-      final data = response['data'];
+      // confirm-pin puede devolver el payload en `data` o en la raiz.
+      final data = response['data'] is Map ? response['data'] : response;
       final String? token = data?['userToken'];
       final String? expiresIso = data?['expiresIn'];
       final dynamic userData = data?['userData'];
@@ -374,8 +375,8 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
-  Future<bool> verifyOtp(String pin) async {
-    if (_otpEmail == null) return false;
+  Future<void> verifyOtp(String pin) async {
+    if (_otpEmail == null || _isOtpLoading || pin.length != 6) return;
     _isOtpLoading = true;
     notifyListeners();
     try {
@@ -383,22 +384,20 @@ class AuthProvider extends ChangeNotifier {
         username: _otpEmail!,
         pin: pin,
       );
-      
-      final data = response['data'];
-      if (data?['is_success'] == true) {
-        // If confirm-pin returns the user data/token, handle it
-        if (data?['userToken'] != null) {
-          await handleBackendResponse(response);
-        }
-        return true;
-      } else {
-        showNativeSnackBar(data?['message'] ?? "Invalid OTP", Colors.redAccent);
-        return false;
+
+      final data = response['data'] is Map ? response['data'] : response;
+
+      if (data?['userToken'] != null && data?['expiresIn'] != null && data?['userData'] != null) {
+        await handleBackendResponse(response);
       }
+      showNativeSnackBar(
+        data?['message'] ?? response['message'] ?? "OTP expired.",
+        Colors.redAccent,
+      );
     } catch (e) {
       _logger.e("Error verifying OTP: $e");
       showNativeSnackBar("Failed to verify OTP", Colors.redAccent);
-      return false;
+      return;
     } finally {
       _isOtpLoading = false;
       notifyListeners();

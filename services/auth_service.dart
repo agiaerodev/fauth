@@ -63,6 +63,7 @@ class AuthService extends BaseApiService {
         "username": username,
         "pin": pin,
         "device": _detectDevice(),
+        "authMode": "login"
       }
     };
 

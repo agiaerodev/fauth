@@ -45,26 +45,23 @@ class _OtpPageState extends State<OtpPage> {
   }
 
   Future<void> _verifyOtp() async {
-    if (_pin.length < 6) return;
+    try {
+      if (_pin.length < 6) return;
 
-    final authProvider = context.read<AuthProvider>();
-    final success = await authProvider.verifyOtp(_pin);
-    
-    if (success) {
-      if (mounted) {
-        context.go(AuthRouteNames.home);
-      }
-    } else {
+      final authProvider = context.read<AuthProvider>();
+      await authProvider.verifyOtp(_pin);
+    } catch(e) {
       setState(() {
         _hasError = true;
       });
     }
+
   }
 
   Future<void> _resendCode() async {
     final authProvider = context.read<AuthProvider>();
     if (authProvider.otpEmail != null) {
-      await authProvider.sendOtp(authProvider.otpEmail!);
+      await authProvider.sendOtp(authProvider.otpEmail!, authMode: 'login');
       // Clear fields and focus first field
       for (var controller in _controllers) {
         controller.clear();
