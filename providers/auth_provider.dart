@@ -343,24 +343,56 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
-  Future<void> sendOtp(String email, {String? authMode}) async {
+  Future<void> sendOtp(
+    String email, {
+    String? authMode,
+    String? firstName,
+    String? lastName,
+    String? phone,
+  }) async {
     _isOtpLoading = true;
     _otpEmail = email;
     notifyListeners();
     try {
       final response = await AuthService().sendPin(
         username: email,
-        authMode: authMode
+        authMode: authMode,
+        firstName: firstName,
+        lastName: lastName,
+        phone: phone,
       );
-      if (response['data']?['is_success'] == true) {
+
+      final data = response is Map && response['data'] is Map
+          ? response['data']
+          : response;
+
+      final bool isSuccess = data?['is_success'] == true;
+      final bool otpSent = data?['otp_sent'] == true;
+      final String message = (data?['message'] as String?) ??
+          (isSuccess ? "OTP sent successfully" : "Failed to send OTP");
+
+      if (isSuccess && otpSent) {
         startResendTimer();
-        showNativeSnackBar("OTP sent successfully", Colors.green);
+        showNativeSnackBar(message, Colors.green);
       } else {
-        showNativeSnackBar(response['data']?['message'] ?? "Failed to send OTP", Colors.redAccent);
+        final int? retryAfter = data?['retry_after_seconds'] as int?;
+        if (retryAfter != null && retryAfter > 0) {
+          _resendSeconds = retryAfter;
+          _resendTimer?.cancel();
+          _resendTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+            if (_resendSeconds > 0) {
+              _resendSeconds--;
+              notifyListeners();
+            } else {
+              _resendTimer?.cancel();
+            }
+          });
+        }
+        showNativeSnackBar(message, Colors.redAccent);
       }
     } catch (e) {
       _logger.e("Error sending OTP: $e");
-      showNativeSnackBar("Failed to send OTP", Colors.redAccent);
+      showNativeSnackBar(_extractErrorMessage(e), Colors.redAccent);
       rethrow;
     } finally {
       _isOtpLoading = false;
@@ -389,12 +421,24 @@ class AuthProvider extends ChangeNotifier {
       );
     } catch (e) {
       _logger.e("Error verifying OTP: $e");
-      showNativeSnackBar("Failed to verify OTP", Colors.redAccent);
+      showNativeSnackBar(_extractErrorMessage(e), Colors.redAccent);
       return;
     } finally {
       _isOtpLoading = false;
       notifyListeners();
     }
+  }
+
+  /// Extrae un mensaje legible desde una excepción lanzada por la capa de red.
+  /// Los errores HTTP (4xx/5xx) llegan como `Exception('HTTP $status - $errorMsg')`,
+  /// por lo que removemos ese prefijo para mostrar solo el mensaje real del backend.
+  String _extractErrorMessage(Object e) {
+    final raw = e.toString().replaceFirst('Exception: ', '');
+    final match = RegExp(r'^HTTP \d+ - (.*)$').firstMatch(raw);
+    if (match != null) {
+      return match.group(1) ?? raw;
+    }
+    return raw;
   }
 
   void startResendTimer() {

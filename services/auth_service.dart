@@ -32,14 +32,20 @@ class AuthService extends BaseApiService {
 
   Future<dynamic> sendPin({
     required String username,
-    String? authMode
+    String? authMode,
+    String? firstName,
+    String? lastName,
+    String? phone,
   }) async {
     const route = '/profile/v1/auth/send-pin';
     final body = {
       "attributes": {
         "username": username,
         "device": _detectDevice(),
-        if (authMode != null) "authMode": authMode
+        if (authMode != null) "authMode": authMode,
+        if (firstName != null && firstName.isNotEmpty) "firstName": firstName,
+        if (lastName != null && lastName.isNotEmpty) "lastName": lastName,
+        if (phone != null && phone.isNotEmpty) "phone": int.tryParse(phone) ?? phone,
       }
     };
 

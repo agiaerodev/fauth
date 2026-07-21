@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/widgets/app_button.dart';
 import '../providers/auth_provider.dart';
 import '../routes/auth_route_names.dart';
+import '../widgets/register_info_modal.dart';
 
 class OtpPage extends StatefulWidget {
   const OtpPage({super.key});
@@ -63,6 +64,23 @@ class _OtpPageState extends State<OtpPage> {
     if (authProvider.otpEmail != null) {
       await authProvider.sendOtp(authProvider.otpEmail!, authMode: 'login');
       // Clear fields and focus first field
+      for (var controller in _controllers) {
+        controller.clear();
+      }
+      _focusNodes[0].requestFocus();
+      setState(() {
+        _hasError = false;
+      });
+    }
+  }
+
+  Future<void> _goToSignUp() async {
+    final authProvider = context.read<AuthProvider>();
+    final email = authProvider.otpEmail;
+    if (email == null) return;
+
+    final registered = await RegisterInfoModal.show(context, email: email);
+    if (registered == true && mounted) {
       for (var controller in _controllers) {
         controller.clear();
       }
@@ -204,6 +222,25 @@ class _OtpPageState extends State<OtpPage> {
                           fontWeight: FontWeight.bold,
                           fontSize: 14,
                           letterSpacing: 0.5,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    GestureDetector(
+                      onTap: _goToSignUp,
+                      child: RichText(
+                        text: TextSpan(
+                          style: const TextStyle(fontSize: 14, color: Colors.black87),
+                          children: [
+                            const TextSpan(text: "Don't have an account? "),
+                            TextSpan(
+                              text: 'Sign Up',
+                              style: TextStyle(
+                                color: linkBlue,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ),

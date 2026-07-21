@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '/core/widgets/app_button.dart';
 import '../pages/otp_page.dart';
+import '../pages/create_account.dart';
 import './auth_input_field.dart';
 import '../providers/auth_provider.dart';
 import 'package:provider/provider.dart';
@@ -69,6 +70,26 @@ class _SendCodeFormState extends State<SendCodeForm> {
               }
             },
             variant: AppButtonVariant.gradient,
+          ),
+          const SizedBox(height: 24),
+          GestureDetector(
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const CreateAccount()),
+              );
+            },
+            child: const Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text('Don’t have an account?', style: TextStyle(fontSize: 16)),
+                SizedBox(width: 5),
+                Text(
+                  'Sign Up',
+                  style: TextStyle(fontSize: 16, color: Color(0xff2292c7)),
+                ),
+              ],
+            ),
           ),
         ],
       ),

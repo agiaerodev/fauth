@@ -9,38 +9,42 @@ class MicrosoftAuthService {
   static const FlutterAppAuth _appAuth = FlutterAppAuth();
 
   Future<dynamic> login() async {
-    final String? tenantId = dotenv.env['MICROSOFT_TENANT'];
-    final result = await _appAuth.authorizeAndExchangeCode(
-      AuthorizationTokenRequest(
-        dotenv.env['CLIENT_ID']!,
-        dotenv.env['REDIRECT_URI']!,
-        serviceConfiguration: AuthorizationServiceConfiguration(
-          authorizationEndpoint:
-          '${dotenv.env['AUTHORITY']}/oauth2/v2.0/authorize',
-          tokenEndpoint: '${dotenv.env['AUTHORITY']}/oauth2/v2.0/token',
+    try {
+      final String? tenantId = dotenv.env['MICROSOFT_TENANT'];
+      final result = await _appAuth.authorizeAndExchangeCode(
+        AuthorizationTokenRequest(
+          dotenv.env['CLIENT_ID']!,
+          dotenv.env['REDIRECT_URI']!,
+          serviceConfiguration: AuthorizationServiceConfiguration(
+            authorizationEndpoint:
+            '${dotenv.env['AUTHORITY']}/oauth2/v2.0/authorize',
+            tokenEndpoint: '${dotenv.env['AUTHORITY']}/oauth2/v2.0/token',
+          ),
+          scopes: ['openid', 'profile', 'email', 'offline_access', 'User.Read'],
+          promptValues: ['select_account'],
+          additionalParameters: {
+            'tenant': tenantId!,
+          },
         ),
-        scopes: ['openid', 'profile', 'email', 'offline_access', 'User.Read'],
-        promptValues: ['select_account'],
-        additionalParameters: {
-          'tenant': tenantId!,
+      );
+
+      final accessToken = result.accessToken;
+
+      if (accessToken == null || accessToken.isEmpty) {
+        throw Exception('Access token nulo en login de Microsoft');
+      }
+
+      final response = await AuthService().loginSocial(
+        type: 'microsoft',
+        token: accessToken,
+        socialData: {
+          'refreshToken': result.refreshToken,
+          'idToken': result.accessToken
         },
-      ),
-    );
-
-    final accessToken = result.accessToken;
-
-    if (accessToken == null || accessToken.isEmpty) {
-      throw Exception('Access token nulo en login de Microsoft');
+      );
+      return response;
+    }  catch (e) {
+      throw Exception('Microsoft login error: ${e.toString()}');
     }
-
-    final response = await AuthService().loginSocial(
-      type: 'microsoft',
-      token: accessToken,
-      socialData: {
-        'refreshToken': result.refreshToken,
-        'idToken': result.accessToken
-      },
-    );
-    return response;
   }
 }
