@@ -252,7 +252,7 @@ class AuthProvider extends ChangeNotifier {
 
   void _startStatusCheck() {
     _statusCheckTimer?.cancel();
-    _statusCheckTimer = Timer.periodic(const Duration(minutes: 1), (timer) {
+    _statusCheckTimer = Timer.periodic(const Duration(minutes: 10), (timer) {
       if (_user != null && _user is Map) {
         final userId = _user['id'];
         if (userId != null) {
