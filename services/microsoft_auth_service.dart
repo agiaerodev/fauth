@@ -35,7 +35,7 @@ class MicrosoftAuthService {
       }
 
       final response = await AuthService().loginSocial(
-        type: 'microsoft',
+        type: dotenv.env['TYPE_SOCIAL_MICROSOFT']!,
         token: accessToken,
         socialData: {
           'refreshToken': result.refreshToken,
