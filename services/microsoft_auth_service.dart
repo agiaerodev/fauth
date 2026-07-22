@@ -39,7 +39,8 @@ class MicrosoftAuthService {
         token: accessToken,
         socialData: {
           'refreshToken': result.refreshToken,
-          'idToken': result.accessToken
+          'idToken': result.idToken,
+          'accessToken': result.accessToken,
         },
       );
       return response;

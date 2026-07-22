@@ -388,7 +388,6 @@ class AuthProvider extends ChangeNotifier {
             }
           });
         }
-        showNativeSnackBar(message, Colors.redAccent);
       }
     } catch (e) {
       _logger.e("Error sending OTP: $e");
@@ -421,7 +420,7 @@ class AuthProvider extends ChangeNotifier {
       );
     } catch (e) {
       _logger.e("Error verifying OTP: $e");
-      showNativeSnackBar(_extractErrorMessage(e), Colors.redAccent);
+      showNativeSnackBar("Failed to verify OTP", Colors.redAccent);
       return;
     } finally {
       _isOtpLoading = false;
