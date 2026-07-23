@@ -344,12 +344,12 @@ class AuthProvider extends ChangeNotifier {
   }
 
   Future<void> sendOtp(
-    String email, {
-    String? authMode,
-    String? firstName,
-    String? lastName,
-    String? phone,
-  }) async {
+      String email, {
+        String? authMode,
+        String? firstName,
+        String? lastName,
+        String? phone,
+      }) async {
     _isOtpLoading = true;
     _otpEmail = email;
     notifyListeners();
@@ -362,36 +362,58 @@ class AuthProvider extends ChangeNotifier {
         phone: phone,
       );
 
-      final data = response is Map && response['data'] is Map
-          ? response['data']
-          : response;
+      final Map<String, dynamic> data =
+      response is Map && response['data'] is Map
+          ? Map<String, dynamic>.from(response['data'])
+          : Map<String, dynamic>.from(response);
 
-      final bool isSuccess = data?['is_success'] == true;
-      final bool otpSent = data?['otp_sent'] == true;
-      final String message = (data?['message'] as String?) ??
-          (isSuccess ? "OTP sent successfully" : "Failed to send OTP");
+      final bool isSuccess = data['is_success'] == true;
+      final bool otpSent = data['otp_sent'] == true;
+
+      final String message =
+      (data['message']?.toString().trim().isNotEmpty ?? false)
+          ? data['message'].toString()
+          : (isSuccess
+          ? 'OTP sent successfully.'
+          : 'Failed to send OTP.');
 
       if (isSuccess && otpSent) {
         startResendTimer();
         showNativeSnackBar(message, Colors.green);
       } else {
-        final int? retryAfter = data?['retry_after_seconds'] as int?;
+        showNativeSnackBar(message, Colors.redAccent);
+
+        final int? retryAfter = data['retry_after_seconds'] as int?;
+
         if (retryAfter != null && retryAfter > 0) {
           _resendSeconds = retryAfter;
+
           _resendTimer?.cancel();
-          _resendTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
-            if (_resendSeconds > 0) {
-              _resendSeconds--;
-              notifyListeners();
-            } else {
-              _resendTimer?.cancel();
-            }
-          });
+          _resendTimer = Timer.periodic(
+            const Duration(seconds: 1),
+                (timer) {
+              if (_resendSeconds > 0) {
+                _resendSeconds--;
+                notifyListeners();
+              } else {
+                timer.cancel();
+              }
+            },
+          );
         }
       }
-    } catch (e) {
-      _logger.e("Error sending OTP: $e");
-      showNativeSnackBar(_extractErrorMessage(e), Colors.redAccent);
+    } catch (e, stackTrace) {
+      _logger.e(
+        'Error sending OTP',
+        error: e,
+        stackTrace: stackTrace,
+      );
+
+      showNativeSnackBar(
+        _extractErrorMessage(e),
+        Colors.redAccent,
+      );
+
       rethrow;
     } finally {
       _isOtpLoading = false;
@@ -413,11 +435,8 @@ class AuthProvider extends ChangeNotifier {
 
       if (data?['userToken'] != null && data?['expiresIn'] != null && data?['userData'] != null) {
         await handleBackendResponse(response);
+
       }
-      showNativeSnackBar(
-        data?['message'] ?? response['message'] ?? "OTP expired.",
-        Colors.redAccent,
-      );
     } catch (e) {
       _logger.e("Error verifying OTP: $e");
       showNativeSnackBar("Failed to verify OTP", Colors.redAccent);
