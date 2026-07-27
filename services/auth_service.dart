@@ -1,5 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+
 import '../../../core/services/base_api_service.dart';
 import 'package:flutter/material.dart';
 
@@ -111,7 +113,8 @@ class AuthService extends BaseApiService {
   }
 
   Future<dynamic> me() async {
-    final route = '/profile/v1/auth/me';
+    final String appName = dotenv.env['APP_NAME'] ?? '';
+    final route = 'profile/v1/auth/app-context/${appName}/me';
     try {
       final config = {
         'refresh': true,
