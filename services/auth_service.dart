@@ -114,7 +114,7 @@ class AuthService extends BaseApiService {
 
   Future<dynamic> me() async {
     final String appName = dotenv.env['APP_NAME'] ?? '';
-    final route = 'profile/v1/auth/app-context/${appName}/me';
+    final route = '/profile/v1/auth/app-context/${appName}/me';
     try {
       final config = {
         'refresh': true,
