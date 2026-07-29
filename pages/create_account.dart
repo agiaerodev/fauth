@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '/core/widgets/app_button.dart';
 import '../widgets/auth_input_field.dart';
 import '../widgets/terms_and_privacy_notice.dart';
+import '../providers/auth_provider.dart';
+import 'otp_page.dart';
 
 class CreateAccount extends StatefulWidget {
   const CreateAccount({ super.key });
@@ -12,20 +15,46 @@ class CreateAccount extends StatefulWidget {
 
 class _CreateAccountState extends State<CreateAccount> {
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
+  final TextEditingController _firstNameController = TextEditingController();
+  final TextEditingController _lastNameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
-  final TextEditingController _passwordController = TextEditingController();
-  final TextEditingController _confirmPasswordController = TextEditingController();
+  final TextEditingController _phoneController = TextEditingController();
 
   @override
   void dispose() {
+    _firstNameController.dispose();
+    _lastNameController.dispose();
     _emailController.dispose();
-    _passwordController.dispose();
-    _confirmPasswordController.dispose();
+    _phoneController.dispose();
     super.dispose();
+  }
+
+  Future<void> _onSignUp() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    try {
+      await authProvider.sendOtp(
+        _emailController.text.trim(),
+        authMode: 'register',
+        firstName: _firstNameController.text.trim(),
+        lastName: _lastNameController.text.trim(),
+        phone: _phoneController.text.trim(),
+      );
+      if (mounted) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const OtpPage()),
+        );
+      }
+    } catch (e) {
+      // Error manejado en el provider
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    final isLoading = context.watch<AuthProvider>().isOtpLoading;
     return Scaffold(
       body: SafeArea(
         child: SingleChildScrollView(
@@ -47,6 +76,30 @@ class _CreateAccountState extends State<CreateAccount> {
                   ),
                   const SizedBox(height: 40,),
                   AuthInputField(
+                    label: 'First Name',
+                    controller: _firstNameController,
+                    keyboardType: TextInputType.name,
+                    validator: (value) {
+                      if (value == null || value.trim().isEmpty) {
+                        return 'Please enter your first name';
+                      }
+                      return null;
+                    }
+                  ),
+                  const SizedBox(height: 10),
+                  AuthInputField(
+                    label: 'Last Name',
+                    controller: _lastNameController,
+                    keyboardType: TextInputType.name,
+                    validator: (value) {
+                      if (value == null || value.trim().isEmpty) {
+                        return 'Please enter your last name';
+                      }
+                      return null;
+                    }
+                  ),
+                  const SizedBox(height: 10),
+                  AuthInputField(
                     label: 'Email', 
                     controller: _emailController, 
                     keyboardType: TextInputType.emailAddress,
@@ -63,30 +116,16 @@ class _CreateAccountState extends State<CreateAccount> {
                   ),
                   const SizedBox(height: 10),
                   AuthInputField(
-                    label: 'Password',
-                    controller: _passwordController,
-                    obscureText: true,
+                    label: 'Phone Number',
+                    controller: _phoneController,
+                    keyboardType: TextInputType.phone,
                     validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Please enter your password';
+                      if (value == null || value.trim().isEmpty) {
+                        return 'Please enter your phone number';
                       }
-                      if (value.length < 6) {
-                        return 'Password must be at least 6 characters';
-                      }
-                      return null;
-                    }
-                  ),
-                  const SizedBox(height: 10),
-                  AuthInputField(
-                    label: 'Confirm Password',
-                    controller: _confirmPasswordController,
-                    obscureText: true,
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Please confirm your password';
-                      }
-                      if (value != _passwordController.text) {
-                        return 'Passwords do not match';
+                      final phoneRegex = RegExp(r'^[0-9]{6,15}$');
+                      if (!phoneRegex.hasMatch(value.trim())) {
+                        return 'Please enter a valid phone number';
                       }
                       return null;
                     }
@@ -94,11 +133,8 @@ class _CreateAccountState extends State<CreateAccount> {
                   const SizedBox(height: 40,),
                   AppButton(
                     label: 'Sign Up',
-                    onPressed: () {
-                      if (_formKey.currentState!.validate()) {
-                        // Sign up logic
-                      }
-                    },
+                    isLoading: isLoading,
+                    onPressed: _onSignUp,
                     variant: AppButtonVariant.gradient,
                   ),
                   const SizedBox(height: 12,),
@@ -127,3 +163,5 @@ class _CreateAccountState extends State<CreateAccount> {
     );
   }
 }
+
+

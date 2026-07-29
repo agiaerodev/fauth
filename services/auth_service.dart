@@ -1,5 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+
 import '../../../core/services/base_api_service.dart';
 import 'package:flutter/material.dart';
 
@@ -26,6 +28,59 @@ class AuthService extends BaseApiService {
       return response;
     } catch (e) {
       debugPrint('Error during Login: $e');
+      rethrow;
+    }
+  }
+
+  Future<dynamic> sendPin({
+    required String username,
+    String? authMode,
+    String? firstName,
+    String? lastName,
+    String? phone,
+  }) async {
+    const route = '/profile/v1/auth/send-pin';
+    final body = {
+      "attributes": {
+        "username": username,
+        "device": _detectDevice(),
+        if (authMode != null) "authMode": authMode,
+        if (firstName != null && firstName.isNotEmpty) "firstName": firstName,
+        if (lastName != null && lastName.isNotEmpty) "lastName": lastName,
+        if (phone != null && phone.isNotEmpty) "phone": int.tryParse(phone) ?? phone,
+      }
+    };
+
+    try {
+      final response = await post(route, body);
+      debugPrint('Send PIN successful');
+      return response;
+    } catch (e) {
+      debugPrint('Error during Send PIN: $e');
+      rethrow;
+    }
+  }
+
+  Future<dynamic> confirmPin({
+    required String username,
+    required String pin,
+  }) async {
+    const route = '/profile/v1/auth/confirm-pin';
+    final body = {
+      "attributes": {
+        "username": username,
+        "pin": pin,
+        "device": _detectDevice(),
+        "authMode": "login"
+      }
+    };
+
+    try {
+      final response = await post(route, body);
+      debugPrint('Confirm PIN successful');
+      return response;
+    } catch (e) {
+      debugPrint('Error during Confirm PIN: $e');
       rethrow;
     }
   }
@@ -58,7 +113,8 @@ class AuthService extends BaseApiService {
   }
 
   Future<dynamic> me() async {
-    final route = '/profile/v1/auth/me';
+    final String appName = dotenv.env['APP_NAME'] ?? '';
+    final route = '/profile/v1/auth/app-context/${appName}/me';
     try {
       final config = {
         'refresh': true,

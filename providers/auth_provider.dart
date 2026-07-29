@@ -20,18 +20,21 @@ class AuthProvider extends ChangeNotifier {
   bool _isInitialLoading = true;
   bool _hasSeenWelcome = false;
   Timer? _statusCheckTimer;
+  int _resendSeconds = 120;
+  Timer? _resendTimer;
+  bool _isOtpLoading = false;
+  String? _otpEmail;
 
   dynamic get user => _user;
-
   bool get isAuthenticated => _user != null;
-
   bool get isLoading => _isLoading;
-
   bool isMethodLoading(AuthMethod method) => _loadingMethods[method] ?? false;
-
   bool get isInitialLoading => _isInitialLoading;
-
   bool get hasSeenWelcome => _hasSeenWelcome;
+  int get resendSeconds => _resendSeconds;
+  bool get isOtpLoading => _isOtpLoading;
+  String? get otpEmail => _otpEmail;
+  bool get canResend => _resendSeconds == 0;
 
   final String appMode;
   final String permissionApp;
@@ -100,30 +103,35 @@ class AuthProvider extends ChangeNotifier {
   }
 
   Future<void> _initializeAuth() async {
-    _hasSeenWelcome = await PreferencesService().hasSeenWelcome();
-    ApiClient().onUnauthorized = () async {
-      _logger.w("Unauthorized. Please sign in again...");
-      showNativeSnackBar(
-        "Unauthorized. Please sign in again.",
-        Colors.redAccent,
-      );
-      await logout();
-    };
-    // Timer de seguridad
+    // Temporizador de seguridad: si tarda más de 5 segundos, liberamos la pantalla
     Future.delayed(const Duration(seconds: 5), () {
       if (_isInitialLoading) {
+        _logger.w("La inicialización está tardando demasiado. Forzando finalización de carga.");
         _isInitialLoading = false;
         notifyListeners();
       }
     });
 
     try {
+      _hasSeenWelcome = await PreferencesService().hasSeenWelcome();
+      
+      ApiClient().onUnauthorized = () async {
+        _logger.w("Unauthorized. Please sign in again...");
+        showNativeSnackBar(
+          "Unauthorized. Please sign in again.",
+          Colors.redAccent,
+        );
+        await logout();
+      };
+
       await initializeAuthenticatedUser();
     } catch (e) {
       _logger.e("Error en carga inicial: $e");
     } finally {
-      _isInitialLoading = false;
-      notifyListeners();
+      if (_isInitialLoading) {
+        _isInitialLoading = false;
+        notifyListeners();
+      }
     }
   }
 
@@ -181,7 +189,8 @@ class AuthProvider extends ChangeNotifier {
 
   Future<void> handleBackendResponse(dynamic response) async {
     try {
-      final data = response['data'];
+      // confirm-pin puede devolver el payload en `data` o en la raiz.
+      final data = response['data'] is Map ? response['data'] : response;
       final String? token = data?['userToken'];
       final String? expiresIso = data?['expiresIn'];
       final dynamic userData = data?['userData'];
@@ -243,7 +252,7 @@ class AuthProvider extends ChangeNotifier {
 
   void _startStatusCheck() {
     _statusCheckTimer?.cancel();
-    _statusCheckTimer = Timer.periodic(const Duration(minutes: 1), (timer) {
+    _statusCheckTimer = Timer.periodic(const Duration(minutes: 10), (timer) {
       if (_user != null && _user is Map) {
         final userId = _user['id'];
         if (userId != null) {
@@ -334,9 +343,139 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
+  Future<void> sendOtp(
+      String email, {
+        String? authMode,
+        String? firstName,
+        String? lastName,
+        String? phone,
+      }) async {
+    _isOtpLoading = true;
+    _otpEmail = email;
+    notifyListeners();
+    try {
+      final response = await AuthService().sendPin(
+        username: email,
+        authMode: authMode,
+        firstName: firstName,
+        lastName: lastName,
+        phone: phone,
+      );
+
+      final Map<String, dynamic> data =
+      response is Map && response['data'] is Map
+          ? Map<String, dynamic>.from(response['data'])
+          : Map<String, dynamic>.from(response);
+
+      final bool isSuccess = data['is_success'] == true;
+      final bool otpSent = data['otp_sent'] == true;
+
+      final String message =
+      (data['message']?.toString().trim().isNotEmpty ?? false)
+          ? data['message'].toString()
+          : (isSuccess
+          ? 'OTP sent successfully.'
+          : 'Failed to send OTP.');
+
+      if (isSuccess && otpSent) {
+        startResendTimer();
+        showNativeSnackBar(message, Colors.green);
+      } else {
+        showNativeSnackBar(message, Colors.redAccent);
+
+        final int? retryAfter = data['retry_after_seconds'] as int?;
+
+        if (retryAfter != null && retryAfter > 0) {
+          _resendSeconds = retryAfter;
+
+          _resendTimer?.cancel();
+          _resendTimer = Timer.periodic(
+            const Duration(seconds: 1),
+                (timer) {
+              if (_resendSeconds > 0) {
+                _resendSeconds--;
+                notifyListeners();
+              } else {
+                timer.cancel();
+              }
+            },
+          );
+        }
+      }
+    } catch (e, stackTrace) {
+      _logger.e(
+        'Error sending OTP',
+        error: e,
+        stackTrace: stackTrace,
+      );
+
+      showNativeSnackBar(
+        _extractErrorMessage(e),
+        Colors.redAccent,
+      );
+
+      rethrow;
+    } finally {
+      _isOtpLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> verifyOtp(String pin) async {
+    if (_otpEmail == null || _isOtpLoading || pin.length != 6) return;
+    _isOtpLoading = true;
+    notifyListeners();
+    try {
+      final response = await AuthService().confirmPin(
+        username: _otpEmail!,
+        pin: pin,
+      );
+
+      final data = response['data'] is Map ? response['data'] : response;
+
+      if (data?['userToken'] != null && data?['expiresIn'] != null && data?['userData'] != null) {
+        await handleBackendResponse(response);
+
+      }
+    } catch (e) {
+      _logger.e("Error verifying OTP: $e");
+      showNativeSnackBar("Failed to verify OTP", Colors.redAccent);
+      return;
+    } finally {
+      _isOtpLoading = false;
+      notifyListeners();
+    }
+  }
+
+  /// Extrae un mensaje legible desde una excepción lanzada por la capa de red.
+  /// Los errores HTTP (4xx/5xx) llegan como `Exception('HTTP $status - $errorMsg')`,
+  /// por lo que removemos ese prefijo para mostrar solo el mensaje real del backend.
+  String _extractErrorMessage(Object e) {
+    final raw = e.toString().replaceFirst('Exception: ', '');
+    final match = RegExp(r'^HTTP \d+ - (.*)$').firstMatch(raw);
+    if (match != null) {
+      return match.group(1) ?? raw;
+    }
+    return raw;
+  }
+
+  void startResendTimer() {
+    _resendSeconds = 120;
+    _resendTimer?.cancel();
+    _resendTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (_resendSeconds > 0) {
+        _resendSeconds--;
+        notifyListeners();
+      } else {
+        _resendTimer?.cancel();
+      }
+    });
+  }
+
   @override
   void dispose() {
     _stopStatusCheck();
+    _resendTimer?.cancel();
     super.dispose();
   }
 }
