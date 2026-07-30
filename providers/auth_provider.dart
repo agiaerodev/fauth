@@ -472,6 +472,14 @@ class AuthProvider extends ChangeNotifier {
     });
   }
 
+  void updateUser(Map<String, dynamic> updates) {
+    print('updateUser $updates');
+    if (_user != null && _user is Map) {
+      _user = {..._user, ...updates};
+      notifyListeners();
+    }
+  }
+
   @override
   void dispose() {
     _stopStatusCheck();
