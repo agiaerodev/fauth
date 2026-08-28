@@ -9,6 +9,7 @@ import '../../../core/utils/avatar_url_helper.dart';
 import '../../../core/utils/helpers.dart';
 import '../services/auth_service.dart';
 import '../../../core/services/preferences_service.dart';
+import '../../notifications/services/device_token_service.dart';
 
 enum AuthMethod { microsoft, google, apple, email }
 
@@ -241,11 +242,13 @@ class AuthProvider extends ChangeNotifier {
       final validatedUser = await verifyUserStatusFn!(userId, userData);
       if (validatedUser != null && hasAccess(permissionApp, userData)) {
         _user = validatedUser;
+        unawaited(DeviceTokenService().registerDeviceToken(userId));
       } else {
         await logout();
       }
     } else {
       _user = userData;
+      unawaited(DeviceTokenService().registerDeviceToken(userId));
     }
     notifyListeners();
   }
