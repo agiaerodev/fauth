@@ -225,6 +225,7 @@ class AuthProvider extends ChangeNotifier {
       if (userData != null) {
         ApiClient().setHandlingUnauthorized(false);
         await ApiClient().saveToken(token, expirationDate);
+        await DeviceTokenService().registerDeviceToken(userData['id']);
         await _validateAndSetUser(userData['id'], userData);
         _startStatusCheck();
         return;
