@@ -75,12 +75,12 @@ class _SignInFormState extends State<SignInForm> {
                   // El método login ahora valida credenciales y envía el OTP
                   await authProvider.login(_emailController, _passwordController);
                   
-                  if (mounted) {
+                  /*if (mounted) {
                     Navigator.push(
                       context,
                       MaterialPageRoute(builder: (context) => const OtpPage()),
                     );
-                  }
+                  }*/
                 } catch (e) {
                   // Error manejado en el provider
                 }
