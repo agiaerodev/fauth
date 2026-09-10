@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:crypto/crypto.dart';
 import 'package:dart_jsonwebtoken/dart_jsonwebtoken.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_appauth/flutter_appauth.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:uuid/uuid.dart';
@@ -119,9 +120,11 @@ class AppleAuthService {
         }
       }
 
+      final firebaseTokenId = await FirebaseMessaging.instance.getToken();
       final response = await AuthService().loginSocial(
         type: 'apple',
         token: token,
+        firebaseTokenId: firebaseTokenId,
         socialData: {
           'idToken': result.idToken,
           'accessToken': result.accessToken,

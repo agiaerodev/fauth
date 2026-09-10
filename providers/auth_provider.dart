@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:logger/logger.dart';
 import '../services/microsoft_auth_service.dart';
@@ -73,9 +74,11 @@ class AuthProvider extends ChangeNotifier {
     _loadingMethods[AuthMethod.email] = true;
     notifyListeners();
     try {
+      final firebaseTokenId = await FirebaseMessaging.instance.getToken();
       final response = await AuthService().login(
         username: email.text.trim(),
         password: password.text.trim(),
+        firebaseTokenId: firebaseTokenId,
       );
       await handleBackendResponse(response);
       if (_user != null) {
@@ -430,9 +433,11 @@ class AuthProvider extends ChangeNotifier {
     _isOtpLoading = true;
     notifyListeners();
     try {
+      final firebaseTokenId = await FirebaseMessaging.instance.getToken();
       final response = await AuthService().confirmPin(
         username: _otpEmail!,
         pin: pin,
+        firebaseTokenId: firebaseTokenId,
       );
 
       final data = response['data'] is Map ? response['data'] : response;

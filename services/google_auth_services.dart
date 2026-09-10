@@ -1,5 +1,6 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'auth_service.dart';
 
@@ -43,9 +44,11 @@ class GoogleAuthService {
         throw Exception('Null ID token in Google login');
       }
 
+      final firebaseTokenId = await FirebaseMessaging.instance.getToken();
       final response = await AuthService().loginSocial(
         type: 'google',
         token: idToken,
+        firebaseTokenId: firebaseTokenId,
         socialData: {
           'idToken': idToken,
           'accessToken': accessToken,
