@@ -15,13 +15,13 @@ class AuthService extends BaseApiService {
   Future<dynamic> login({
     required String username,
     required String password,
-    String? firebaseTokenId,
+    String? firebaseToken,
   }) async {
     const route = '/profile/v1/auth/login';
     final body = {
       'username': username,
       'password': password,
-      if (firebaseTokenId != null && firebaseTokenId.isNotEmpty) 'firebaseTokenId': firebaseTokenId,
+      if (firebaseToken != null && firebaseToken.isNotEmpty) 'firebaseToken': firebaseToken,
     };
 
     try {
@@ -66,7 +66,7 @@ class AuthService extends BaseApiService {
   Future<dynamic> confirmPin({
     required String username,
     required String pin,
-    String? firebaseTokenId,
+    String? firebaseToken,
   }) async {
     const route = '/profile/v1/auth/confirm-pin';
     final body = {
@@ -75,7 +75,7 @@ class AuthService extends BaseApiService {
         "pin": pin,
         "device": _detectDevice(),
         "authMode": "login",
-        if (firebaseTokenId != null && firebaseTokenId.isNotEmpty) "firebaseTokenId": firebaseTokenId,
+        if (firebaseToken != null && firebaseToken.isNotEmpty) "firebaseToken": firebaseToken,
       }
     };
 
@@ -92,7 +92,7 @@ class AuthService extends BaseApiService {
   Future<dynamic> loginSocial({
     required String type,
     required String? token,
-    String? firebaseTokenId,
+    String? firebaseToken,
     dynamic socialData,
   }) async {
     final route = '/profile/v1/auth/social/$type';
@@ -104,7 +104,7 @@ class AuthService extends BaseApiService {
         'token': token,
         'socialData': socialData ?? {},
         'device': device,
-        if (firebaseTokenId != null && firebaseTokenId.isNotEmpty) 'firebaseTokenId': firebaseTokenId,
+        if (firebaseToken != null && firebaseToken.isNotEmpty) 'firebaseToken': firebaseToken,
       },
     };
 

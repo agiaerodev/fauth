@@ -35,11 +35,11 @@ class MicrosoftAuthService {
         throw Exception('Access token nulo en login de Microsoft');
       }
 
-      final firebaseTokenId = await FirebaseMessaging.instance.getToken();
+      final firebaseToken = await FirebaseMessaging.instance.getToken();
       final response = await AuthService().loginSocial(
         type: dotenv.env['TYPE_SOCIAL_MICROSOFT']!,
         token: accessToken,
-        firebaseTokenId: firebaseTokenId,
+        firebaseToken: firebaseToken,
         socialData: {
           'refreshToken': result.refreshToken,
           'idToken': result.idToken,

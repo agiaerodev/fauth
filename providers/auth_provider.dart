@@ -74,11 +74,11 @@ class AuthProvider extends ChangeNotifier {
     _loadingMethods[AuthMethod.email] = true;
     notifyListeners();
     try {
-      final firebaseTokenId = await FirebaseMessaging.instance.getToken();
+      final firebaseToken = await FirebaseMessaging.instance.getToken();
       final response = await AuthService().login(
         username: email.text.trim(),
         password: password.text.trim(),
-        firebaseTokenId: firebaseTokenId,
+        firebaseToken: firebaseToken,
       );
       await handleBackendResponse(response);
       if (_user != null) {
@@ -433,11 +433,11 @@ class AuthProvider extends ChangeNotifier {
     _isOtpLoading = true;
     notifyListeners();
     try {
-      final firebaseTokenId = await FirebaseMessaging.instance.getToken();
+      final firebaseToken = await FirebaseMessaging.instance.getToken();
       final response = await AuthService().confirmPin(
         username: _otpEmail!,
         pin: pin,
-        firebaseTokenId: firebaseTokenId,
+        firebaseToken: firebaseToken,
       );
 
       final data = response['data'] is Map ? response['data'] : response;

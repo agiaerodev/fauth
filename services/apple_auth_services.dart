@@ -120,11 +120,11 @@ class AppleAuthService {
         }
       }
 
-      final firebaseTokenId = await FirebaseMessaging.instance.getToken();
+      final firebaseToken = await FirebaseMessaging.instance.getToken();
       final response = await AuthService().loginSocial(
         type: 'apple',
         token: token,
-        firebaseTokenId: firebaseTokenId,
+        firebaseToken: firebaseToken,
         socialData: {
           'idToken': result.idToken,
           'accessToken': result.accessToken,

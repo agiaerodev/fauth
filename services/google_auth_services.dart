@@ -44,11 +44,11 @@ class GoogleAuthService {
         throw Exception('Null ID token in Google login');
       }
 
-      final firebaseTokenId = await FirebaseMessaging.instance.getToken();
+      final firebaseToken = await FirebaseMessaging.instance.getToken();
       final response = await AuthService().loginSocial(
         type: 'google',
         token: idToken,
-        firebaseTokenId: firebaseTokenId,
+        firebaseToken: firebaseToken,
         socialData: {
           'idToken': idToken,
           'accessToken': accessToken,
