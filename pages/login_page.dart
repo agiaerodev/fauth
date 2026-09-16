@@ -68,15 +68,16 @@ class LoginPage extends StatelessWidget {
                   ),
                 ] else ...[
                   // PASSENGER: Google, Microsoft, Facebook, Apple
+                  // TO-DO
                   Wrap(
                     runSpacing: 10,
                     children: [
-                      OutlineButtonProvider(
-                        label: 'Continue with Google',
-                        icon: FontAwesomeIcons.google,
-                        isLoading: authProvider.isMethodLoading(AuthMethod.google),
-                        onPressed: () => _handleLogin(context, AuthMethod.google),
-                      ),
+                      // OutlineButtonProvider(
+                      //   label: 'Continue with Google',
+                      //   icon: FontAwesomeIcons.google,
+                      //   isLoading: authProvider.isMethodLoading(AuthMethod.google),
+                      //   onPressed: () => _handleLogin(context, AuthMethod.google),
+                      // ),
                       OutlineButtonProvider(
                         label: 'Continue with Microsoft',
                         icon: FontAwesomeIcons.microsoft,
@@ -84,20 +85,20 @@ class LoginPage extends StatelessWidget {
                         isLoading: authProvider.isMethodLoading(AuthMethod.microsoft),
                         onPressed: () => _handleLogin(context, AuthMethod.microsoft),
                       ),
-                      OutlineButtonProvider(
-                        label: 'Continue with Facebook',
-                        icon: FontAwesomeIcons.facebook,
-                        iconColor: const Color(0xFF1877F2),
-                        isLoading: false,
-                        onPressed: () {},
-                      ),
-                      OutlineButtonProvider(
-                        label: 'Continue with Apple',
-                        icon: FontAwesomeIcons.apple,
-                        iconColor: const Color(0xFF000000),
-                        isLoading: authProvider.isMethodLoading(AuthMethod.apple),
-                        onPressed: () => _handleLogin(context, AuthMethod.apple),
-                      ),
+                      // OutlineButtonProvider(
+                      //   label: 'Continue with Facebook',
+                      //   icon: FontAwesomeIcons.facebook,
+                      //   iconColor: const Color(0xFF1877F2),
+                      //   isLoading: false,
+                      //   onPressed: () {},
+                      // ),
+                      // OutlineButtonProvider(
+                      //   label: 'Continue with Apple',
+                      //   icon: FontAwesomeIcons.apple,
+                      //   iconColor: const Color(0xFF000000),
+                      //   isLoading: authProvider.isMethodLoading(AuthMethod.apple),
+                      //   onPressed: () => _handleLogin(context, AuthMethod.apple),
+                      // ),
                     ],
                   ),
                 ],
