@@ -26,12 +26,6 @@ class TermsAndPrivacyNotice extends StatelessWidget {
             _footerLink('Privacy Policy', linkColor),
           ],
         ),
-        const SizedBox(height: 8),
-        _footerLink(
-          'Delete Account',
-          linkColor,
-          onTap: _openAccountDeletionPage,
-        ),
       ],
     );
   }
