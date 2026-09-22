@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class TermsAndPrivacyNotice extends StatelessWidget {
   const TermsAndPrivacyNotice({ super.key });
+
+  static const String _accountDeletionPath = '/auth/account-deletion';
 
   @override
   Widget build(BuildContext context) {
@@ -22,14 +26,19 @@ class TermsAndPrivacyNotice extends StatelessWidget {
             _footerLink('Privacy Policy', linkColor),
           ],
         ),
+        const SizedBox(height: 8),
+        _footerLink(
+          'Delete Account',
+          linkColor,
+          onTap: _openAccountDeletionPage,
+        ),
       ],
     );
   }
 
-  Widget _footerLink(String text, Color color) {
+  Widget _footerLink(String text, Color color, {VoidCallback? onTap}) {
     return InkWell(
-      onTap: () {
-      },
+      onTap: onTap,
       child: Text(
         text,
         style: TextStyle(
@@ -39,5 +48,37 @@ class TermsAndPrivacyNotice extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  Future<void> _openAccountDeletionPage() async {
+    final baseRoute = dotenv.env['API_ROUTE'] ?? '';
+    final baseUri = Uri.tryParse(baseRoute);
+    if (baseUri == null || !baseUri.hasScheme) {
+      throw StateError('API_ROUTE is not a valid URL');
+    }
+
+    final uri = baseUri.replace(
+      path: _normalizedBasePath(baseUri.path),
+      fragment: _normalizedFragment(_accountDeletionPath),
+    );
+
+    final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (!launched) {
+      throw StateError('Could not launch account deletion URL');
+    }
+  }
+
+  String _normalizedBasePath(String basePath) {
+    if (basePath.isEmpty || basePath == '/') {
+      return '/';
+    }
+
+    return basePath.endsWith('/')
+        ? basePath.substring(0, basePath.length - 1)
+        : basePath;
+  }
+
+  String _normalizedFragment(String routePath) {
+    return routePath.startsWith('/') ? routePath : '/$routePath';
   }
 }
