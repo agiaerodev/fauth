@@ -16,6 +16,7 @@ class OtpPage extends StatefulWidget {
 class _OtpPageState extends State<OtpPage> {
   final List<TextEditingController> _controllers = List.generate(6, (index) => TextEditingController());
   final List<FocusNode> _focusNodes = List.generate(6, (index) => FocusNode());
+  final List<String> _previousValues = List.filled(6, '');
   bool _hasError = false;
 
   @override
@@ -37,12 +38,79 @@ class _OtpPageState extends State<OtpPage> {
         _hasError = false;
       });
     }
-    if (value.length == 1 && index < 5) {
+
+    final previous = _previousValues[index];
+    final digits = value.replaceAll(RegExp(r'\D'), '');
+
+    if (digits.length > 1) {
+      // Strip the digit that was already in the field to get what was typed/pasted.
+      String incoming = digits;
+      if (previous.isNotEmpty) {
+        if (digits.startsWith(previous)) {
+          incoming = digits.substring(previous.length);
+        } else if (digits.endsWith(previous)) {
+          incoming = digits.substring(0, digits.length - previous.length);
+        }
+      }
+
+      if (incoming.length <= 1) {
+        _setField(index, incoming.isEmpty ? previous : incoming);
+        if (index < 5) _focusNodes[index + 1].requestFocus();
+      } else {
+        _fillFrom(incoming.length >= 6 ? 0 : index, incoming);
+      }
+      setState(() {});
+      return;
+    }
+
+    if (digits != value) {
+      _setField(index, digits);
+    }
+    _previousValues[index] = digits;
+
+    if (digits.length == 1 && index < 5) {
       _focusNodes[index + 1].requestFocus();
-    } else if (value.isEmpty && index > 0) {
+    } else if (digits.isEmpty && value.isEmpty && index > 0) {
       _focusNodes[index - 1].requestFocus();
     }
     setState(() {});
+  }
+
+  void _setField(int index, String text) {
+    _controllers[index].value = TextEditingValue(
+      text: text,
+      selection: TextSelection.collapsed(offset: text.length),
+    );
+    _previousValues[index] = text;
+  }
+
+  void _fillFrom(int start, String digits) {
+    int i = start;
+    for (final char in digits.split('')) {
+      if (i > 5) break;
+      _setField(i, char);
+      i++;
+    }
+    if (i > 5) {
+      _focusNodes[5].requestFocus();
+      if (_pin.length == 6) FocusScope.of(context).unfocus();
+    } else {
+      _focusNodes[i].requestFocus();
+    }
+  }
+
+  void _clearAll() {
+    for (var i = 0; i < 6; i++) {
+      _controllers[i].clear();
+      _previousValues[i] = '';
+    }
+  }
+
+  String _formatSeconds(int totalSeconds) {
+    if (totalSeconds < 60) return '${totalSeconds}s';
+    final minutes = totalSeconds ~/ 60;
+    final seconds = (totalSeconds % 60).toString().padLeft(2, '0');
+    return '$minutes:$seconds';
   }
 
   Future<void> _verifyOtp() async {
@@ -64,9 +132,7 @@ class _OtpPageState extends State<OtpPage> {
     if (authProvider.otpEmail != null) {
       await authProvider.sendOtp(authProvider.otpEmail!, authMode: 'login');
       // Clear fields and focus first field
-      for (var controller in _controllers) {
-        controller.clear();
-      }
+      _clearAll();
       _focusNodes[0].requestFocus();
       setState(() {
         _hasError = false;
@@ -81,9 +147,7 @@ class _OtpPageState extends State<OtpPage> {
 
     final registered = await RegisterInfoModal.show(context, email: email);
     if (registered == true && mounted) {
-      for (var controller in _controllers) {
-        controller.clear();
-      }
+      _clearAll();
       _focusNodes[0].requestFocus();
       setState(() {
         _hasError = false;
@@ -184,7 +248,8 @@ class _OtpPageState extends State<OtpPage> {
                               focusNode: _focusNodes[index],
                               textAlign: TextAlign.center,
                               keyboardType: TextInputType.number,
-                              maxLength: 1,
+                              autofillHints: index == 0 ? const [AutofillHints.oneTimeCode] : null,
+                              enableInteractiveSelection: true,
                               style: const TextStyle(
                                 fontSize: 24,
                                 fontWeight: FontWeight.bold,
@@ -221,7 +286,7 @@ class _OtpPageState extends State<OtpPage> {
                           child: Text(
                             canResend
                                 ? 'RESEND CODE NOW'
-                                : 'RESEND CODE IN ${resendSeconds}s',
+                                : 'RESEND CODE IN ${_formatSeconds(resendSeconds)}',
                             style: TextStyle(
                               color: canResend ? linkBlue : Colors.grey.withOpacity(0.6),
                               fontWeight: FontWeight.bold,

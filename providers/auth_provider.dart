@@ -451,13 +451,17 @@ class AuthProvider extends ChangeNotifier {
           ? 'OTP sent successfully.'
           : 'Failed to send OTP.');
 
+      final int? retryAfter = _parseSeconds(data['retry_after_seconds']);
+
       if (isSuccess && otpSent) {
-        startResendTimer();
+        if (retryAfter != null && retryAfter > 0) {
+          _startResendCountdown(retryAfter);
+        } else {
+          startResendTimer();
+        }
         showNativeSnackBar(message, Colors.green);
       } else {
         showNativeSnackBar(message, Colors.redAccent);
-
-        final int? retryAfter = data['retry_after_seconds'] as int?;
 
         if (retryAfter != null && retryAfter > 0) {
           _startResendCountdown(retryAfter);
@@ -520,6 +524,12 @@ class AuthProvider extends ChangeNotifier {
       return match.group(1) ?? raw;
     }
     return raw;
+  }
+
+  int? _parseSeconds(dynamic value) {
+    if (value is num) return value.toInt();
+    if (value is String) return int.tryParse(value.trim());
+    return null;
   }
 
   void startResendTimer() => _startResendCountdown(120);
