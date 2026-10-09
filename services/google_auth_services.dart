@@ -55,6 +55,7 @@ class GoogleAuthService {
         type: 'google',
         token: idToken,
         firebaseToken: firebaseToken,
+        appContext: "passenger-app",
         socialData: {
           'idToken': idToken,
           'accessToken': accessToken,

@@ -93,6 +93,7 @@ class AuthService extends BaseApiService {
     required String type,
     required String? token,
     String? firebaseToken,
+    String? appContext,
     dynamic socialData,
   }) async {
     final route = '/profile/v1/auth/social/$type';
@@ -105,6 +106,7 @@ class AuthService extends BaseApiService {
         'socialData': socialData ?? {},
         'device': device,
         if (firebaseToken != null && firebaseToken.isNotEmpty) 'firebaseToken': firebaseToken,
+        if (appContext != null && appContext.isNotEmpty) 'appContext': appContext,
       },
     };
 
