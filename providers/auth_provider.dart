@@ -13,6 +13,7 @@ import '../../../core/utils/helpers.dart';
 import '../services/auth_service.dart';
 import '../../../core/services/preferences_service.dart';
 import '../../notifications/services/device_token_service.dart';
+import '../models/otp_account_not_found_exception.dart';
 
 enum AuthMethod { microsoft, google, apple, email }
 
@@ -422,7 +423,7 @@ class AuthProvider extends ChangeNotifier {
         String? authMode,
         String? firstName,
         String? lastName,
-        String? phone,
+        String? msisdn,
       }) async {
     _isOtpLoading = true;
     _otpEmail = email;
@@ -433,7 +434,7 @@ class AuthProvider extends ChangeNotifier {
         authMode: authMode,
         firstName: firstName,
         lastName: lastName,
-        phone: phone,
+        msisdn: msisdn,
       );
 
       final Map<String, dynamic> data =
@@ -474,6 +475,11 @@ class AuthProvider extends ChangeNotifier {
         stackTrace: stackTrace,
       );
 
+      if (authMode != 'register' &&
+          OtpAccountNotFoundException.matchesApiError(e)) {
+        throw const OtpAccountNotFoundException();
+      }
+
       showNativeSnackBar(
         _extractErrorMessage(e),
         Colors.redAccent,
@@ -506,6 +512,9 @@ class AuthProvider extends ChangeNotifier {
       }
     } catch (e) {
       _logger.e("Error verifying OTP: $e");
+      if (OtpAccountNotFoundException.matchesApiError(e)) {
+        throw const OtpAccountNotFoundException();
+      }
       showNativeSnackBar("Failed to verify OTP", Colors.redAccent);
       return;
     } finally {

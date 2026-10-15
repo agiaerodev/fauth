@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:go_router/go_router.dart';
 import '../../../core/widgets/app_button.dart';
 import '../providers/auth_provider.dart';
-import '../routes/auth_route_names.dart';
+import '../models/otp_account_not_found_exception.dart';
+import '../utils/otp_registration_flow.dart';
 import '../widgets/register_info_modal.dart';
 
 class OtpPage extends StatefulWidget {
@@ -119,7 +119,11 @@ class _OtpPageState extends State<OtpPage> {
 
       final authProvider = context.read<AuthProvider>();
       await authProvider.verifyOtp(_pin);
+    } on OtpAccountNotFoundException {
+      if (!mounted) return;
+      await _offerRegistration();
     } catch(e) {
+      if (!mounted) return;
       setState(() {
         _hasError = true;
       });
@@ -130,14 +134,33 @@ class _OtpPageState extends State<OtpPage> {
   Future<void> _resendCode() async {
     final authProvider = context.read<AuthProvider>();
     if (authProvider.otpEmail != null) {
-      await authProvider.sendOtp(authProvider.otpEmail!, authMode: 'login');
-      // Clear fields and focus first field
-      _clearAll();
-      _focusNodes[0].requestFocus();
-      setState(() {
-        _hasError = false;
-      });
+      try {
+        await authProvider.sendOtp(authProvider.otpEmail!, authMode: 'login');
+        if (!mounted) return;
+        _resetOtp();
+      } on OtpAccountNotFoundException {
+        if (!mounted) return;
+        await _offerRegistration();
+      } catch (e) {
+        // Error handled in provider.
+      }
     }
+  }
+
+  Future<void> _offerRegistration() async {
+    final email = context.read<AuthProvider>().otpEmail;
+    if (email == null) return;
+
+    final registered = await OtpRegistrationFlow.open(context, email: email);
+    if (registered && mounted) _resetOtp();
+  }
+
+  void _resetOtp() {
+    _clearAll();
+    _focusNodes[0].requestFocus();
+    setState(() {
+      _hasError = false;
+    });
   }
 
   Future<void> _goToSignUp() async {

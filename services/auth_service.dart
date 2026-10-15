@@ -39,7 +39,7 @@ class AuthService extends BaseApiService {
     String? authMode,
     String? firstName,
     String? lastName,
-    String? phone,
+    String? msisdn,
   }) async {
     const route = '/profile/v1/auth/send-pin';
     final body = {
@@ -49,7 +49,8 @@ class AuthService extends BaseApiService {
         if (authMode != null) "authMode": authMode,
         if (firstName != null && firstName.isNotEmpty) "firstName": firstName,
         if (lastName != null && lastName.isNotEmpty) "lastName": lastName,
-        if (phone != null && phone.isNotEmpty) "phone": int.tryParse(phone) ?? phone,
+        if (msisdn != null && msisdn.isNotEmpty)
+          "msisdn": int.tryParse(msisdn) ?? msisdn,
       }
     };
 

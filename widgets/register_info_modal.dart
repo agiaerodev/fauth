@@ -41,6 +41,7 @@ class _RegisterInfoModalState extends State<RegisterInfoModal> {
   }
 
   Future<void> _onContinue() async {
+    FocusScope.of(context).unfocus();
     if (!_formKey.currentState!.validate()) return;
 
     final authProvider = context.read<AuthProvider>();
@@ -50,7 +51,7 @@ class _RegisterInfoModalState extends State<RegisterInfoModal> {
         authMode: 'register',
         firstName: _firstNameController.text.trim(),
         lastName: _lastNameController.text.trim(),
-        phone: _phoneController.text.trim(),
+        msisdn: _phoneController.text.trim(),
       );
       if (mounted) {
         Navigator.of(context).pop(true);
@@ -66,95 +67,97 @@ class _RegisterInfoModalState extends State<RegisterInfoModal> {
 
     return Dialog(
       backgroundColor: Colors.transparent,
-      insetPadding: const EdgeInsets.symmetric(horizontal: 24),
+      insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
       child: Container(
-        padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+        clipBehavior: Clip.antiAlias,
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(24),
         ),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Align(
-                alignment: Alignment.centerRight,
-                child: IconButton(
-                  icon: const Icon(Icons.close, color: Colors.grey),
-                  onPressed: () => Navigator.of(context).pop(false),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: IconButton(
+                    icon: const Icon(Icons.close, color: Colors.grey),
+                    onPressed: () => Navigator.of(context).pop(false),
+                  ),
                 ),
-              ),
-              const Text(
-                'Tell us about yourself',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: titleColor,
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
+                const Text(
+                  'Tell us about yourself',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: titleColor,
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Please enter your name and phone number to continue.',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: subtitleBlue.withOpacity(0.8),
-                  fontSize: 14,
+                const SizedBox(height: 8),
+                Text(
+                  'Please enter your name and phone number to continue.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: subtitleBlue.withOpacity(0.8),
+                    fontSize: 14,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 24),
-              AuthInputField(
-                label: 'First Name',
-                controller: _firstNameController,
-                keyboardType: TextInputType.name,
-                validator: (value) {
-                  if (value == null || value.trim().isEmpty) {
-                    return 'Please enter your first name';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 16),
-              AuthInputField(
-                label: 'Last Name',
-                controller: _lastNameController,
-                keyboardType: TextInputType.name,
-                validator: (value) {
-                  if (value == null || value.trim().isEmpty) {
-                    return 'Please enter your last name';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 16),
-              AuthInputField(
-                label: 'Phone Number',
-                controller: _phoneController,
-                keyboardType: TextInputType.phone,
-                validator: (value) {
-                  if (value == null || value.trim().isEmpty) {
-                    return 'Please enter your phone number';
-                  }
-                  final phoneRegex = RegExp(r'^[0-9]{6,15}$');
-                  if (!phoneRegex.hasMatch(value.trim())) {
-                    return 'Please enter a valid phone number';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 28),
-              AppButton(
-                label: 'Continue',
-                isLoading: isLoading,
-                onPressed: _onContinue,
-                variant: AppButtonVariant.gradient,
-              ),
-            ],
+                const SizedBox(height: 24),
+                AuthInputField(
+                  label: 'First Name',
+                  controller: _firstNameController,
+                  keyboardType: TextInputType.name,
+                  validator: (value) {
+                    if (value == null || value.trim().isEmpty) {
+                      return 'Please enter your first name';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 16),
+                AuthInputField(
+                  label: 'Last Name',
+                  controller: _lastNameController,
+                  keyboardType: TextInputType.name,
+                  validator: (value) {
+                    if (value == null || value.trim().isEmpty) {
+                      return 'Please enter your last name';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 16),
+                AuthInputField(
+                  label: 'Phone Number',
+                  controller: _phoneController,
+                  keyboardType: TextInputType.phone,
+                  validator: (value) {
+                    if (value == null || value.trim().isEmpty) {
+                      return 'Please enter your phone number';
+                    }
+                    final phoneRegex = RegExp(r'^[0-9]{6,15}$');
+                    if (!phoneRegex.hasMatch(value.trim())) {
+                      return 'Please enter a valid phone number';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 28),
+                AppButton(
+                  label: 'Continue',
+                  isLoading: isLoading,
+                  onPressed: _onContinue,
+                  variant: AppButtonVariant.gradient,
+                ),
+              ],
+            ),
           ),
         ),
       ),
     );
   }
 }
-

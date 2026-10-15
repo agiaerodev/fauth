@@ -39,7 +39,7 @@ class _CreateAccountState extends State<CreateAccount> {
         authMode: 'register',
         firstName: _firstNameController.text.trim(),
         lastName: _lastNameController.text.trim(),
-        phone: _phoneController.text.trim(),
+        msisdn: _phoneController.text.trim(),
       );
       if (mounted) {
         Navigator.push(
@@ -163,5 +163,4 @@ class _CreateAccountState extends State<CreateAccount> {
     );
   }
 }
-
 

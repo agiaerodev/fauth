@@ -5,6 +5,8 @@ import '../pages/create_account.dart';
 import './auth_input_field.dart';
 import '../providers/auth_provider.dart';
 import 'package:provider/provider.dart';
+import '../models/otp_account_not_found_exception.dart';
+import '../utils/otp_registration_flow.dart';
 
 class SendCodeForm extends StatefulWidget {
   const SendCodeForm({super.key});
@@ -57,11 +59,25 @@ class _SendCodeFormState extends State<SendCodeForm> {
                     _emailController.text.trim(),
                     authMode: 'login',
                   );
-                  if (mounted) {
+                  if (context.mounted) {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
                           builder: (context) => const OtpPage()),
+                    );
+                  }
+                } on OtpAccountNotFoundException {
+                  if (!context.mounted) return;
+                  final registered = await OtpRegistrationFlow.open(
+                    context,
+                    email: _emailController.text.trim(),
+                  );
+                  if (registered && context.mounted) {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const OtpPage(),
+                      ),
                     );
                   }
                 } catch (e) {
@@ -96,5 +112,3 @@ class _SendCodeFormState extends State<SendCodeForm> {
     );
   }
 }
-
-
