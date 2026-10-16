@@ -33,6 +33,12 @@ class AppleAuthService {
           return 'Apple authorization was not handled: ${error.message}';
         case AuthorizationErrorCode.notInteractive:
           return 'Apple authorization requires user interaction';
+        case AuthorizationErrorCode.credentialExport:
+          return 'Apple credential export failed: ${error.message}';
+        case AuthorizationErrorCode.credentialImport:
+          return 'Apple credential import failed: ${error.message}';
+        case AuthorizationErrorCode.matchedExcludedCredential:
+          return 'Apple credential matched an excluded credential: ${error.message}';
         case AuthorizationErrorCode.unknown:
           return 'Unknown Apple authorization error: ${error.message}';
       }
