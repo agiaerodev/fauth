@@ -25,8 +25,9 @@ class AuthProvider extends ChangeNotifier {
   bool _isInitialLoading = true;
   bool _hasSeenWelcome = false;
   Timer? _statusCheckTimer;
-  final ValueNotifier<int> _resendSecondsNotifier = ValueNotifier<int>(120);
+  final ValueNotifier<int> _resendSecondsNotifier = ValueNotifier<int>(0);
   Timer? _resendTimer;
+  DateTime? _resendAvailableAt;
   bool _isOtpLoading = false;
   String? _otpEmail;
   int _socialLoginRequestId = 0;
@@ -41,10 +42,19 @@ class AuthProvider extends ChangeNotifier {
   /// provider so the tick doesn't rebuild every AuthProvider listener (router,
   /// proxy providers, screens...).
   ValueListenable<int> get resendSecondsListenable => _resendSecondsNotifier;
-  int get resendSeconds => _resendSecondsNotifier.value;
+  int get resendSeconds {
+    final availableAt = _resendAvailableAt;
+    if (availableAt == null) return 0;
+    final milliseconds = availableAt.difference(DateTime.now()).inMilliseconds;
+    return milliseconds > 0 ? (milliseconds / 1000).ceil() : 0;
+  }
   bool get isOtpLoading => _isOtpLoading;
   String? get otpEmail => _otpEmail;
-  bool get canResend => resendSeconds == 0;
+  bool get canResend => !_isOtpLoading && resendSeconds == 0;
+
+  bool hasPendingOtpFor(String email) =>
+      _otpEmail?.toLowerCase() == email.trim().toLowerCase() &&
+      resendSeconds > 0;
 
   final String appMode;
   final String permissionApp;
@@ -425,8 +435,18 @@ class AuthProvider extends ChangeNotifier {
         String? lastName,
         String? msisdn,
       }) async {
+    if (_isOtpLoading) {
+      throw StateError('An OTP request is already in progress.');
+    }
+    email = email.trim();
+    if (hasPendingOtpFor(email)) {
+      if (authMode != 'register') return;
+      final message = 'Please wait ${resendSeconds}s before requesting a new code.';
+      showNativeSnackBar(message, Colors.redAccent);
+      throw StateError(message);
+    }
+
     _isOtpLoading = true;
-    _otpEmail = email;
     notifyListeners();
     try {
       final response = await AuthService().sendPin(
@@ -455,18 +475,20 @@ class AuthProvider extends ChangeNotifier {
       final int? retryAfter = _parseSeconds(data['retry_after_seconds']);
 
       if (isSuccess && otpSent) {
+        _otpEmail = email;
         if (retryAfter != null && retryAfter > 0) {
           _startResendCountdown(retryAfter);
         } else {
           startResendTimer();
         }
         showNativeSnackBar(message, Colors.green);
+      } else if (retryAfter != null &&
+          retryAfter > 0 &&
+          message.toLowerCase().contains('otp recently generated')) {
+        _otpEmail = email;
+        _startResendCountdown(retryAfter);
       } else {
-        showNativeSnackBar(message, Colors.redAccent);
-
-        if (retryAfter != null && retryAfter > 0) {
-          _startResendCountdown(retryAfter);
-        }
+        throw Exception(message);
       }
     } catch (e, stackTrace) {
       _logger.e(
@@ -545,10 +567,12 @@ class AuthProvider extends ChangeNotifier {
 
   void _startResendCountdown(int seconds) {
     _resendTimer?.cancel();
+    _resendAvailableAt = DateTime.now().add(Duration(seconds: seconds));
     _resendSecondsNotifier.value = seconds;
     _resendTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (_resendSecondsNotifier.value > 0) _resendSecondsNotifier.value--;
-      if (_resendSecondsNotifier.value == 0) {
+      final remaining = resendSeconds;
+      _resendSecondsNotifier.value = remaining;
+      if (remaining == 0) {
         timer.cancel();
         // canResend changed: a single provider notification at the end.
         notifyListeners();

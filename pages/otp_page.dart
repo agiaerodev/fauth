@@ -14,7 +14,12 @@ class OtpPage extends StatefulWidget {
 }
 
 class _OtpPageState extends State<OtpPage> {
-  final List<TextEditingController> _controllers = List.generate(6, (index) => TextEditingController());
+  // Mobile keyboards only report backspace when the editing value changes.
+  static const _emptyFieldMarker = '\u200B';
+  final List<TextEditingController> _controllers = List.generate(
+    6,
+    (index) => TextEditingController(text: _emptyFieldMarker),
+  );
   final List<FocusNode> _focusNodes = List.generate(6, (index) => FocusNode());
   final List<String> _previousValues = List.filled(6, '');
   bool _hasError = false;
@@ -30,7 +35,7 @@ class _OtpPageState extends State<OtpPage> {
     super.dispose();
   }
 
-  String get _pin => _controllers.map((c) => c.text).join();
+  String get _pin => _previousValues.join();
 
   void _onOtpChanged(String value, int index) {
     if (_hasError) {
@@ -63,23 +68,21 @@ class _OtpPageState extends State<OtpPage> {
       return;
     }
 
-    if (digits != value) {
-      _setField(index, digits);
-    }
-    _previousValues[index] = digits;
+    _setField(index, digits);
 
     if (digits.length == 1 && index < 5) {
       _focusNodes[index + 1].requestFocus();
-    } else if (digits.isEmpty && value.isEmpty && index > 0) {
+    } else if (digits.isEmpty && index > 0) {
       _focusNodes[index - 1].requestFocus();
     }
     setState(() {});
   }
 
   void _setField(int index, String text) {
+    final editingText = '$_emptyFieldMarker$text';
     _controllers[index].value = TextEditingValue(
-      text: text,
-      selection: TextSelection.collapsed(offset: text.length),
+      text: editingText,
+      selection: TextSelection.collapsed(offset: editingText.length),
     );
     _previousValues[index] = text;
   }
@@ -101,8 +104,7 @@ class _OtpPageState extends State<OtpPage> {
 
   void _clearAll() {
     for (var i = 0; i < 6; i++) {
-      _controllers[i].clear();
-      _previousValues[i] = '';
+      _setField(i, '');
     }
   }
 
@@ -133,6 +135,7 @@ class _OtpPageState extends State<OtpPage> {
 
   Future<void> _resendCode() async {
     final authProvider = context.read<AuthProvider>();
+    if (!authProvider.canResend) return;
     if (authProvider.otpEmail != null) {
       try {
         await authProvider.sendOtp(authProvider.otpEmail!, authMode: 'login');
@@ -271,6 +274,8 @@ class _OtpPageState extends State<OtpPage> {
                               focusNode: _focusNodes[index],
                               textAlign: TextAlign.center,
                               keyboardType: TextInputType.number,
+                              autocorrect: false,
+                              enableSuggestions: false,
                               autofillHints: index == 0 ? const [AutofillHints.oneTimeCode] : null,
                               enableInteractiveSelection: true,
                               style: const TextStyle(
@@ -284,7 +289,15 @@ class _OtpPageState extends State<OtpPage> {
                                 contentPadding: EdgeInsets.zero,
                               ),
                               onChanged: (value) => _onOtpChanged(value, index),
-                              onTap: () => setState(() {}),
+                              onTap: () {
+                                if (_previousValues[index].isEmpty) {
+                                  _controllers[index].selection =
+                                      TextSelection.collapsed(
+                                        offset: _controllers[index].text.length,
+                                      );
+                                }
+                                setState(() {});
+                              },
                             ),
                           ),
                         );
@@ -303,7 +316,8 @@ class _OtpPageState extends State<OtpPage> {
                     ValueListenableBuilder<int>(
                       valueListenable: authProvider.resendSecondsListenable,
                       builder: (context, resendSeconds, _) {
-                        final canResend = _pin.isNotEmpty || resendSeconds == 0;
+                        final canResend =
+                            resendSeconds == 0 && authProvider.canResend;
                         return TextButton(
                           onPressed: canResend ? _resendCode : null,
                           child: Text(
