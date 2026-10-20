@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import '../../../core/providers/app_context_provider.dart';
 import '../widgets/outline_button_provider.dart';
 import '../widgets/sign_in_form.dart';
 import '../widgets/send_code_form.dart';
@@ -25,6 +26,9 @@ class LoginPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final authProvider = context.watch<AuthProvider>();
+    final allowLocalLogin = context.select<AppContextProvider, bool>(
+      (provider) => provider.appContext?.allowLocalLogin == true,
+    );
     const Color titleColor = Color(0xFF1A2B47);
 
     final String authType =
@@ -157,12 +161,11 @@ class LoginPage extends StatelessWidget {
                   ),
                 ),*/
 
-                // ── Formulario según modo ──
                 const SizedBox(height: 20),
-                if (isAgentsMode)
-                  const SignInForm()   // Email + Password + Sign In
+                if (allowLocalLogin || isAgentsMode)
+                  const SignInForm()
                 else
-                  const SendCodeForm(), // Solo Email + Send Code (OTP)
+                  const SendCodeForm(),
 
                 const SizedBox(height: 40),
                 const TermsAndPrivacyNotice(),
