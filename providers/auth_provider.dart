@@ -14,10 +14,13 @@ import '../services/auth_service.dart';
 import '../../../core/services/preferences_service.dart';
 import '../../notifications/services/device_token_service.dart';
 import '../models/otp_account_not_found_exception.dart';
+import '../../../core/services/impersonation_service.dart';
 
 enum AuthMethod { microsoft, google, apple, email }
 
 class AuthProvider extends ChangeNotifier {
+  static const permissionImpersonate = 'profile.user.impersonate';
+
   final Logger _logger = Logger(printer: PrettyPrinter(methodCount: 0));
   dynamic _user;
   bool _isLoading = false;
@@ -31,6 +34,10 @@ class AuthProvider extends ChangeNotifier {
   bool _isOtpLoading = false;
   String? _otpEmail;
   int _socialLoginRequestId = 0;
+  bool _isSwitchingIdentity = false;
+
+  bool get isImpersonating => ApiClient().isImpersonating;
+  bool get isSwitchingIdentity => _isSwitchingIdentity;
 
   dynamic get user => _user;
   bool get isAuthenticated => _user != null;
@@ -38,6 +45,7 @@ class AuthProvider extends ChangeNotifier {
   bool isMethodLoading(AuthMethod method) => _loadingMethods[method] ?? false;
   bool get isInitialLoading => _isInitialLoading;
   bool get hasSeenWelcome => _hasSeenWelcome;
+
   /// Ticks every second during the OTP countdown. Listen to this instead of the
   /// provider so the tick doesn't rebuild every AuthProvider listener (router,
   /// proxy providers, screens...).
@@ -48,6 +56,7 @@ class AuthProvider extends ChangeNotifier {
     final milliseconds = availableAt.difference(DateTime.now()).inMilliseconds;
     return milliseconds > 0 ? (milliseconds / 1000).ceil() : 0;
   }
+
   bool get isOtpLoading => _isOtpLoading;
   String? get otpEmail => _otpEmail;
   bool get canResend => !_isOtpLoading && resendSeconds == 0;
@@ -132,16 +141,44 @@ class AuthProvider extends ChangeNotifier {
     // Temporizador de seguridad: si tarda más de 5 segundos, liberamos la pantalla
     Future.delayed(const Duration(seconds: 5), () {
       if (_isInitialLoading) {
-        _logger.w("La inicialización está tardando demasiado. Forzando finalización de carga.");
+        _logger.w(
+          "La inicialización está tardando demasiado. Forzando finalización de carga.",
+        );
         _isInitialLoading = false;
         notifyListeners();
       }
     });
 
     try {
-      _hasSeenWelcome = await PreferencesService().hasSeenWelcome();
-      
+      final hasSeenWelcome = await PreferencesService().hasSeenWelcome();
+      _hasSeenWelcome = _hasSeenWelcome || hasSeenWelcome;
+
       ApiClient().onUnauthorized = () async {
+        if (_isSwitchingIdentity) {
+          ApiClient().setHandlingUnauthorized(false);
+          return;
+        }
+        if (isImpersonating) {
+          try {
+            await stopImpersonation();
+            showNativeSnackBar(
+              'Your original session has been restored.',
+              Colors.orange,
+            );
+          } catch (e, stack) {
+            ApiClient().setHandlingUnauthorized(false);
+            _logger.e(
+              'Unable to restore the original session',
+              error: e,
+              stackTrace: stack,
+            );
+            showNativeSnackBar(
+              'Unable to restore your session. Try Return in Profile.',
+              Colors.redAccent,
+            );
+          }
+          return;
+        }
         _logger.w("Unauthorized. Please sign in again...");
         showNativeSnackBar(
           "Unauthorized. Please sign in again.",
@@ -173,19 +210,22 @@ class AuthProvider extends ChangeNotifier {
         case AuthMethod.microsoft:
           response = await MicrosoftAuthService.instance.login().timeout(
             const Duration(seconds: 90),
-            onTimeout: () => throw Exception('Login timeout - Please try again'),
+            onTimeout: () =>
+                throw Exception('Login timeout - Please try again'),
           );
           break;
         case AuthMethod.google:
           response = await GoogleAuthService.instance.login().timeout(
             const Duration(seconds: 90),
-            onTimeout: () => throw Exception('Login timeout - Please try again'),
+            onTimeout: () =>
+                throw Exception('Login timeout - Please try again'),
           );
           break;
         case AuthMethod.apple:
           response = await AppleAuthService.instance.login().timeout(
             const Duration(seconds: 90),
-            onTimeout: () => throw Exception('Login timeout - Please try again'),
+            onTimeout: () =>
+                throw Exception('Login timeout - Please try again'),
           );
           break;
         default:
@@ -209,7 +249,8 @@ class AuthProvider extends ChangeNotifier {
 
       String errorMessage = rawError;
       if (rawError.contains("localhost")) {
-        errorMessage = "OAuth configuration error - Please verify redirect URI settings";
+        errorMessage =
+            "OAuth configuration error - Please verify redirect URI settings";
       } else if (rawError.toLowerCase().contains("timeout")) {
         errorMessage = "Login timeout - Please try again";
       } else if (rawError.toLowerCase().contains("cancelled")) {
@@ -290,18 +331,25 @@ class AuthProvider extends ChangeNotifier {
   }
 
   Future<void> _validateAndSetUser(int userId, dynamic userData) async {
+    final identity = ApiClient().identityVersion;
     if (verifyUserStatusFn != null) {
       // Network errors propagate so callers can keep the session while offline.
       final validatedUser = await verifyUserStatusFn!(userId, userData);
+      if (_isSwitchingIdentity || identity != ApiClient().identityVersion)
+        return;
       if (validatedUser != null && hasAccess(permissionApp, userData)) {
         _setUser(validatedUser);
-        unawaited(DeviceTokenService().registerDeviceToken(userId));
+        if (!isImpersonating) {
+          unawaited(DeviceTokenService().registerDeviceToken(userId));
+        }
       } else {
         await logout();
       }
     } else {
       _setUser(userData);
-      unawaited(DeviceTokenService().registerDeviceToken(userId));
+      if (!isImpersonating) {
+        unawaited(DeviceTokenService().registerDeviceToken(userId));
+      }
     }
     notifyListeners();
   }
@@ -341,6 +389,13 @@ class AuthProvider extends ChangeNotifier {
   }
 
   Future<void> logout() async {
+    if (_isSwitchingIdentity) {
+      throw StateError('A session change is already in progress.');
+    }
+    if (isImpersonating) {
+      await stopImpersonation();
+      return;
+    }
     try {
       _stopStatusCheck();
       if (await ApiClient().getToken() != null) {
@@ -370,18 +425,32 @@ class AuthProvider extends ChangeNotifier {
   }
 
   Future<void> markWelcomeSeen() async {
-    await PreferencesService().markWelcomeSeen();
     _hasSeenWelcome = true;
     notifyListeners();
+    try {
+      await PreferencesService().markWelcomeSeen().timeout(
+        const Duration(seconds: 5),
+      );
+    } catch (error, stackTrace) {
+      _logger.w(
+        'Unable to persist onboarding completion; continuing for this session.',
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
   }
 
   Future<void> initializeAuthenticatedUser() async {
+    if (_isSwitchingIdentity) return;
+    final identity = ApiClient().identityVersion;
     final token = await ApiClient().getToken();
 
     if (token == null || token.isEmpty) return;
 
     try {
       final response = await AuthService().me();
+      if (_isSwitchingIdentity || identity != ApiClient().identityVersion)
+        return;
       _logger.i('api me $response');
 
       final userData = response['data']?['userData'];
@@ -408,6 +477,8 @@ class AuthProvider extends ChangeNotifier {
       await _validateAndSetUser(userData['id'], userData);
       _startStatusCheck();
     } catch (e, stackTrace) {
+      if (_isSwitchingIdentity || identity != ApiClient().identityVersion)
+        return;
       if (isNetworkOrServerUnavailableError(e)) {
         // No definitive backend answer: keep the local session alive and retry later.
         _logger.w(
@@ -428,20 +499,104 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
+  Future<void> startImpersonation(int targetUserId) async {
+    if (!hasAccess(permissionImpersonate)) {
+      throw StateError('You do not have permission to impersonate users.');
+    }
+    if (isImpersonating || _user is! Map) {
+      throw StateError(
+        'Impersonation is not available in the current session.',
+      );
+    }
+    final originalUser = Map<String, dynamic>.from(_user as Map);
+    final originalUserId = int.tryParse('${originalUser['id']}');
+    if (originalUserId == null) {
+      throw StateError('The current user could not be identified.');
+    }
+
+    await _switchIdentity(() async {
+      final session = await ImpersonationService().impersonate(
+        userId: originalUserId,
+        userIdImpersonate: targetUserId,
+      );
+      if (!hasAccess(permissionApp, session.user)) {
+        throw StateError('The selected user does not have access to $appMode.');
+      }
+      await ApiClient().beginImpersonation(session, originalUser);
+      try {
+        final validatedUser = verifyUserStatusFn == null
+            ? session.user
+            : await verifyUserStatusFn!(targetUserId, session.user);
+        if (validatedUser == null) {
+          throw StateError('The selected user is not an active concierge.');
+        }
+        await ApiClient().saveCachedUser(validatedUser);
+        _user = validatedUser;
+      } catch (error) {
+        try {
+          _user = await ApiClient().endImpersonation();
+        } catch (restoreError, restoreStack) {
+          _logger.e(
+            'Unable to roll back impersonation after $error',
+            error: restoreError,
+            stackTrace: restoreStack,
+          );
+          await ApiClient().deleteTokens();
+          throw StateError(
+            'Impersonation failed and the original session could not be '
+            'restored. Try Return in Profile.',
+          );
+        }
+        rethrow;
+      }
+    });
+  }
+
+  Future<void> stopImpersonation() => _switchIdentity(() async {
+    _user = await ApiClient().endImpersonation();
+  });
+
+  Future<void> _switchIdentity(Future<void> Function() change) async {
+    if (_isSwitchingIdentity) {
+      throw StateError('A session change is already in progress.');
+    }
+    _isSwitchingIdentity = true;
+    _stopStatusCheck();
+    notifyListeners();
+    try {
+      await change();
+    } catch (e, stack) {
+      _logger.e(
+        'Unable to change session identity',
+        error: e,
+        stackTrace: stack,
+      );
+      rethrow;
+    } finally {
+      if (!isImpersonating && await ApiClient().getToken() == null) {
+        _user = null;
+      }
+      _isSwitchingIdentity = false;
+      if (_user != null) _startStatusCheck();
+      notifyListeners();
+    }
+  }
+
   Future<void> sendOtp(
-      String email, {
-        String? authMode,
-        String? firstName,
-        String? lastName,
-        String? msisdn,
-      }) async {
+    String email, {
+    String? authMode,
+    String? firstName,
+    String? lastName,
+    String? msisdn,
+  }) async {
     if (_isOtpLoading) {
       throw StateError('An OTP request is already in progress.');
     }
     email = email.trim();
     if (hasPendingOtpFor(email)) {
       if (authMode != 'register') return;
-      final message = 'Please wait ${resendSeconds}s before requesting a new code.';
+      final message =
+          'Please wait ${resendSeconds}s before requesting a new code.';
       showNativeSnackBar(message, Colors.redAccent);
       throw StateError(message);
     }
@@ -458,7 +613,7 @@ class AuthProvider extends ChangeNotifier {
       );
 
       final Map<String, dynamic> data =
-      response is Map && response['data'] is Map
+          response is Map && response['data'] is Map
           ? Map<String, dynamic>.from(response['data'])
           : Map<String, dynamic>.from(response);
 
@@ -466,11 +621,9 @@ class AuthProvider extends ChangeNotifier {
       final bool otpSent = data['otp_sent'] == true;
 
       final String message =
-      (data['message']?.toString().trim().isNotEmpty ?? false)
+          (data['message']?.toString().trim().isNotEmpty ?? false)
           ? data['message'].toString()
-          : (isSuccess
-          ? 'OTP sent successfully.'
-          : 'Failed to send OTP.');
+          : (isSuccess ? 'OTP sent successfully.' : 'Failed to send OTP.');
 
       final int? retryAfter = _parseSeconds(data['retry_after_seconds']);
 
@@ -491,21 +644,14 @@ class AuthProvider extends ChangeNotifier {
         throw Exception(message);
       }
     } catch (e, stackTrace) {
-      _logger.e(
-        'Error sending OTP',
-        error: e,
-        stackTrace: stackTrace,
-      );
+      _logger.e('Error sending OTP', error: e, stackTrace: stackTrace);
 
       if (authMode != 'register' &&
           OtpAccountNotFoundException.matchesApiError(e)) {
         throw const OtpAccountNotFoundException();
       }
 
-      showNativeSnackBar(
-        _extractErrorMessage(e),
-        Colors.redAccent,
-      );
+      showNativeSnackBar(_extractErrorMessage(e), Colors.redAccent);
 
       rethrow;
     } finally {
@@ -528,9 +674,10 @@ class AuthProvider extends ChangeNotifier {
 
       final data = response['data'] is Map ? response['data'] : response;
 
-      if (data?['userToken'] != null && data?['expiresIn'] != null && data?['userData'] != null) {
+      if (data?['userToken'] != null &&
+          data?['expiresIn'] != null &&
+          data?['userData'] != null) {
         await handleBackendResponse(response);
-
       }
     } catch (e) {
       _logger.e("Error verifying OTP: $e");
