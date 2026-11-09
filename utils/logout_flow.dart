@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../../core/widgets/app_snack_bar.dart';
 import '../providers/auth_provider.dart';
 
 abstract final class LogoutFlow {
@@ -13,7 +14,7 @@ abstract final class LogoutFlow {
       ScaffoldMessenger.of(context)
         ..hideCurrentSnackBar()
         ..showSnackBar(
-          const SnackBar(
+          const AppSnackBar(
             content: Text('No internet connection. Connect to log out.'),
             behavior: SnackBarBehavior.floating,
           ),
@@ -47,8 +48,9 @@ abstract final class LogoutFlow {
 
   static Future<bool> _hasInternet() async {
     try {
-      final result = await InternetAddress.lookup('google.com')
-          .timeout(const Duration(seconds: 5));
+      final result = await InternetAddress.lookup(
+        'google.com',
+      ).timeout(const Duration(seconds: 5));
       return result.isNotEmpty && result.first.rawAddress.isNotEmpty;
     } catch (_) {
       return false;
