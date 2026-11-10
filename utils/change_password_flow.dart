@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 import '/core/widgets/app_web_view/app_web_view_screen.dart';
+import '/core/widgets/app_snack_bar.dart';
 
 /// Opens the web change password flow inside an in-app web view.
 abstract final class ChangePasswordFlow {
@@ -16,7 +17,7 @@ abstract final class ChangePasswordFlow {
     final uri = _buildUri();
     if (uri == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Unable to open change password page')),
+        const AppSnackBar(content: Text('Unable to open change password page')),
       );
       return null;
     }
