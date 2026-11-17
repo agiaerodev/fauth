@@ -5,9 +5,14 @@ import '../pages/login_page.dart';
 import '../pages/otp_page.dart';
 import '../pages/splash_screen.dart';
 import '../../home/pages/home_page.dart';
+import '../../home/pages/guest_lobby_page.dart';
 import 'auth_route_names.dart';
 
 final List<RouteBase> authRoutes = [
+  GoRoute(
+    path: AuthRouteNames.guestLobby,
+    builder: (context, state) => const GuestLobbyPage(),
+  ),
   GoRoute(
     path: AuthRouteNames.welcome,
     builder: (context, state) => const WelcomePage(),

@@ -4,4 +4,5 @@ class AuthRouteNames {
   static const otp = '/otp';
   static const home = '/home';
   static const splash = '/';
+  static const guestLobby = '/explore';
 }

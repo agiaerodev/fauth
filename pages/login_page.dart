@@ -9,6 +9,8 @@ import '../widgets/send_code_form.dart';
 import '../widgets/terms_and_privacy_notice.dart';
 import '../providers/auth_provider.dart';
 import 'package:provider/provider.dart';
+import 'package:go_router/go_router.dart';
+import '../routes/auth_route_names.dart';
 
 class LoginPage extends StatelessWidget {
   const LoginPage({super.key});
@@ -39,6 +41,17 @@ class LoginPage extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: Colors.white,
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        surfaceTintColor: Colors.transparent,
+        leading: IconButton(
+          tooltip: 'Back to services',
+          icon: const Icon(Icons.arrow_back, color: titleColor),
+          onPressed: () => context.canPop()
+              ? context.pop()
+              : context.go(AuthRouteNames.guestLobby),
+        ),
+      ),
       body: SafeArea(
         child: SingleChildScrollView(
           child: Padding(
